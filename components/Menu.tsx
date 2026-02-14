@@ -11,7 +11,7 @@ interface MenuProps {
 
 export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+    <div className="flex-grow bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="max-w-4xl w-full">
         <div className="flex flex-col items-center mb-10">
           {/* Reduced title font size */}
@@ -28,10 +28,12 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
               mt-4 mb-0 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border
               ${userTier === 'V'
                 ? 'bg-amber-50 text-amber-700 border-amber-200'
-                : 'bg-blue-50 text-blue-700 border-blue-200'
+                : userTier === 'N'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-gray-100 text-gray-700 border-gray-300'
               }
             `}>
-              {userTier === 'V' ? '👑 VIP 회원' : '😊 일반 회원'}
+              {userTier === 'V' ? '👑 VIP 회원' : userTier === 'N' ? '😊 일반 회원' : '👀 체험하기 (Guest)'}
             </div>
           )}
         </div>

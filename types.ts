@@ -34,14 +34,14 @@ export enum AppStage {
 }
 
 
-export type UserTier = 'N' | 'V'; // N: Normal, V: VIP
+export type UserTier = 'N' | 'V' | 'G'; // N: Normal, V: VIP, G: Guest
 
 export interface DataSource {
   id: string;
   name: string;
   examCode?: string; // e.g., 'MLA-C01'
   examName?: string; // e.g., 'AWS Certified Machine Learning - Specialty'
-  requiredTier?: UserTier; // Minimum tier required to access
+  requiredTier?: UserTier[]; // Tiers allowed to access
   url?: string;
   data?: any[]; // Pre-loaded data
 }

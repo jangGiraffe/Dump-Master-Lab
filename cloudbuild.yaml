@@ -19,6 +19,7 @@ steps:
         gsutil cp gs://${_GCS_BUCKET}/services/dataService.tsx ./services/dataService.tsx
         gsutil cp gs://${_GCS_BUCKET}/services/pdfService.tsx ./services/pdfService.tsx
         gsutil cp gs://${_GCS_BUCKET}/config.ts ./config.ts
+        gsutil cp gs://${_GCS_BUCKET}/.env ./.env
         
         # dump 폴더의 내용을 public/dump로 복사 (재귀적, 병렬)
         # public 폴더에 넣어야 빌드 시 dist/dump로 포함되어 웹에서 접근 가능합니다.

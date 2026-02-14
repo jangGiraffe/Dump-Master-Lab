@@ -124,7 +124,7 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
   const effectiveMax = maxQuestions;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
+    <div className="flex flex-col items-center justify-center flex-grow p-4 bg-gray-50">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
@@ -145,10 +145,12 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
               px-3 py-1 rounded-full text-xs font-bold border
               ${userTier === 'V'
                 ? 'bg-amber-50 text-amber-700 border-amber-200'
-                : 'bg-blue-50 text-blue-700 border-blue-200'
+                : userTier === 'N'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-gray-100 text-gray-700 border-gray-300'
               }
             `}>
-              {userTier === 'V' ? '👑 VIP' : '😊 일반'}
+              {userTier === 'V' ? '👑 VIP' : userTier === 'N' ? '😊 일반' : '👀 Guest'}
             </div>
           )}
         </div>
@@ -196,24 +198,59 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">문제 은행 선택 (다중 선택 가능)</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {currentDatasets.map(ds => (
-                  <div
-                    key={ds.id}
-                    onClick={() => toggleVersion(ds.id)}
-                    className={`cursor-pointer p-3 border rounded-lg flex items-center justify-between transition-all ${selectedVersions.includes(ds.id)
-                      ? 'border-primary bg-primary/5 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
-                  >
-                    <span className="font-medium text-gray-700 text-sm">{ds.name}</span>
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedVersions.includes(ds.id) ? 'border-primary bg-primary' : 'border-gray-300 bg-white'
-                      }`}>
-                      {selectedVersions.includes(ds.id) && (
-                        <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                      )}
-                    </div>
-                  </div>
-                ))}
+                {[...currentDatasets]
+                  .sort((a, b) => {
+                    // Prioritize KR over EN, then alphabetical
+                    const isAKR = a.name.includes('(KR)');
+                    const isBKR = b.name.includes('(KR)');
+                    if (isAKR && !isBKR) return -1;
+                    if (!isAKR && isBKR) return 1;
+                    return a.name.localeCompare(b.name);
+                  })
+                  .map(ds => {
+                    // Parse language badge
+                    let displayName = ds.name;
+                    let lang: 'KR' | 'EN' | null = null;
+
+                    if (displayName.includes('(KR)')) {
+                      lang = 'KR';
+                      displayName = displayName.replace('(KR)', '').trim();
+                    } else if (displayName.includes('(EN)')) {
+                      lang = 'EN';
+                      displayName = displayName.replace('(EN)', '').trim();
+                    }
+
+                    return (
+                      <div
+                        key={ds.id}
+                        onClick={() => toggleVersion(ds.id)}
+                        className={`cursor-pointer p-3 border rounded-lg flex items-center justify-between transition-all ${selectedVersions.includes(ds.id)
+                          ? 'border-primary bg-primary/5 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}
+                      >
+                        <div className="flex items-center text-sm">
+                          {lang === 'KR' && (
+                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                              KR
+                            </span>
+                          )}
+                          {lang === 'EN' && (
+                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                              EN
+                            </span>
+                          )}
+                          <span className="font-medium text-gray-700">{displayName}</span>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedVersions.includes(ds.id) ? 'border-primary bg-primary' : 'border-gray-300 bg-white'
+                          }`}>
+                          {selectedVersions.includes(ds.id) && (
+                            <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
 

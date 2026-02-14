@@ -4,7 +4,7 @@ import { UserTier } from '../types';
 import { Lock } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: (tier: UserTier) => void;
+  onLogin: (tier: UserTier, password?: string) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -21,7 +21,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       const tier = await authenticateUser(password);
       if (tier) {
-        onLogin(tier);
+        onLogin(tier, password);
       } else {
         setError('비밀번호가 올바르지 않습니다.');
         setPassword('');
@@ -34,7 +34,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
+    <div className="flex flex-col items-center justify-center flex-grow p-4">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <div className="flex justify-center mb-6">
           <div className="bg-primary/10 p-4 rounded-full">
@@ -64,6 +64,24 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             disabled={isLoading}
           >
             {isLoading ? '확인 중...' : '시작하기'}
+          </button>
+
+          <div className="relative flex items-center justify-center my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase bg-white px-2 text-gray-500">
+              OR
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onLogin('G')}
+            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md transition-colors border border-gray-300"
+            disabled={isLoading}
+          >
+            Guest 로그인 (체험하기)
           </button>
         </form>
       </div>

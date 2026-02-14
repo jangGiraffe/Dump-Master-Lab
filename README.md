@@ -1,9 +1,9 @@
 
 # Dump Master Lab
 
-덤프파일을 기반으로 문제 은행 및 학습자료를 제공하는 서비스입니다.
+덤프파일을 기반으로 문제 은행 및 학습자료를 제공하는 서비스입니다. 데이터 보안을 위해 **AES 암호화**를 적용하여 원본 데이터 유출을 방지합니다.
 
-## � 서비스 미리보기 (Service Preview)
+## 📱 서비스 미리보기 (Service Preview)
 
 | 메인 화면 | PDF 학습 자료 뷰어 |
 | :---: | :---: |
@@ -22,67 +22,56 @@
 | <img src="img/setting1.png" width="400"/> | <img src="img/setting2.png" width="400"/> |
 
 
-## �🛠️ 초기 설정 (Configuration)
+## 🛠️ 초기 설정 (Configuration)
 
-프로젝트를 실행하기 전에, 제공된 예시 파일들의 이름에서 `.ex` 확장자를 제거하여 실제 설정 파일로 활성화해야 합니다.
+이 프로젝트는 `.env` 파일을 통해 보안 키를 안전하게 관리합니다.
 
-다음 파일들의 이름을 변경해 주세요:
+### 1. 환경 변수 설정 (.env)
+프로젝트 루트에 `.env` 파일을 생성하고( `.env.sample` 참고), 아래와 같이 암호화 키를 설정하세요.
+```env
+VITE_DATA_ENCRYPTION_KEY=gogo_akis_ninja
+```
+* **주의**: 이 키는 `encrypt-dumps.js`(암호화)와 `App.tsx`(복호화) 양쪽에서 사용됩니다.
 
-1. **`services/dataService.tsx.ex`** &rarr; **`services/dataService.tsx`**
-   - 문제 은행 데이터 소스(JSON 파일 등)를 설정하는 파일입니다.
-2. **`services/pdfService.tsx.ex`** &rarr; **`services/pdfService.tsx`**
-   - 학습 자료실에 표시될 PDF 문서 목록과 링크를 관리하는 파일입니다.
-3. **`config.ts.ex`** &rarr; **`config.ts`**
-   - 앱 비밀번호 해시 및 기타 전역 설정을 관리하는 파일입니다.
+### 2. 로그인 비밀번호 설정
+`config.ts` 파일에서 로그인 검증을 위한 해시값을 설정합니다.
+1. `hash-generator.html` 파일을 브라우저로 엽니다.
+2. `.env`에 설정한 비밀번호(예: `gogo_akis_ninja`)를 입력하여 SHA-256 해시를 생성합니다.
+3. `config.ts`의 `VIP_PASSWORD_HASH` 값을 생성된 해시값으로 교체합니다.
 
-## 🔐 비밀번호 변경 (Changing Password)
+## 🔐 데이터 관리 및 암호화 (Data Workflow)
 
-보안을 위해 비밀번호는 평문이 아닌 **SHA-256 해시값**으로 저장됩니다. 비밀번호를 변경하려면 아래 절차를 따르세요:
+보안을 위해 **원본 데이터**는 Git에 올리지 않고, **암호화된 데이터**만 배포합니다.
 
-1. 프로젝트 루트에 있는 **`hash-generator.html`** 파일을 브라우저에서 엽니다.
-2. 원하는 새 비밀번호를 입력하면 자동으로 해시값이 생성됩니다.
-3. 생성된 해시값을 복사합니다.
-4. **`config.ts`** 파일을 열고, `NORMAL_PASSWORD_HASH` (일반 유저) 또는 `VIP_PASSWORD_HASH` (VIP 유저) 값을 교체합니다.
+* **`unencrypted-dumps/`**: (GitIgnored) 원본 JSON 문제 파일이 위치하는 로컬 폴더입니다.
+* **`dump/`**: (Public) 앱이 실제로 불러오는 암호화된 JSON 파일 폴더입니다.
 
-> **참고:** 해시값은 복호화가 불가능하므로, 원본 비밀번호를 잊어버리면 다시 설정해야 합니다.
+### 문제 추가 및 업데이트 방법
+1. **`unencrypted-dumps/` 폴더**에 새로운 문제 파일(JSON)을 넣거나 수정합니다.
+2. 터미널에서 다음 스크립트를 실행합니다.
+   ```bash
+   node encrypt-dumps.js
+   ```
+3. 스크립트가 `unencrypted-dumps/`의 내용을 암호화하여 `dump/` 폴더를 자동으로 갱신(덮어쓰기)합니다.
+4. **`services/dataService.tsx`**에 해당 파일 정보를 등록하여 앱에 표시되도록 합니다.
+
+> **Note**: `sample_questions.json`은 공개용이므로 암호화되지 않고 그대로 복사됩니다.
 
 ## 🚀 실행 방법 (Getting Started)
 
-1. **의존성 설치 (Install Dependencies)**
+1. **의존성 설치**
    ```bash
    npm install
    ```
 
-2. **개발 서버 실행 (Run Dev Server)**
+2. **개발 서버 실행**
    ```bash
    npm run dev
    ```
-   
-   이후 브라우저에서 `http://localhost:8080/` (또는 터미널에 표시된 주소)로 접속하여 확인합니다.
+   브라우저에서 `http://localhost:8080/` 접속하여 확인.
 
-## 📂 문제 데이터 추가 (Adding Questions)
+## 🔐 접근 권한 (Access Tiers)
 
-새로운 문제 데이터를 추가하려면 `dump/` 폴더에 JSON 파일을 위치시켜야 합니다.
-데이터 형식은 **`dump/sample_questions.json`** 파일을 참고하여 작성해 주세요.
-
-**JSON 형식 예시:**
-
-```json
-[
-  {
-    "question": "AWS의 클라우드 컴퓨팅 서비스 중 '서버리스' 컴퓨팅을 제공하는 서비스는 무엇입니까?",
-    "options": [
-      "A. Amazon EC2",
-      "B. AWS Lambda",
-      "C. Amazon RDS",
-      "D. Amazon EBS"
-    ],
-    "answer": "B",
-    "explanation": "AWS Lambda는 서버를 프로비저닝하거나 관리하지 않고도 코드를 실행할 수 있게 해주는 이벤트 중심의 서버리스 컴퓨팅 서비스입니다."
-  }
-]
-```
-
-작성한 JSON 파일은 `services/dataService.tsx`에서 import 하여 `dataSources` 배열에 추가하면 앱에 반영됩니다.
-
-
+* **VIP 회원**: 프리미엄 비밀번호로 로그인하며, 모든 문제 은행에 제한 없이 접근 가능합니다.
+* **일반 회원**: 일반 비밀번호(`akis`)로 로그인하며, 각 덤프의 **5문제 미리보기**만 가능합니다.
+* **Guest (체험하기)**: 비밀번호 없이 체험판 문제(`sample_questions.json`)만 이용 가능합니다.

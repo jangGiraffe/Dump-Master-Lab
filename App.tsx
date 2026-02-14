@@ -9,6 +9,8 @@ import { Result } from './components/Result';
 import { dataSources } from './services/dataService';
 import { shuffleArray, processRawQuestions } from './utils';
 import { Loader2 } from 'lucide-react';
+// Import crypto-js for decryption
+import CryptoJS from 'crypto-js';
 
 const App: React.FC = () => {
   const [stage, setStage] = useState<AppStage>(AppStage.LOGIN);
@@ -19,20 +21,26 @@ const App: React.FC = () => {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>('');
 
-  const loadData = async (tier: UserTier) => {
+  const loadData = async (tier: UserTier, password?: string) => {
     setStage(AppStage.LOADING);
     setError('');
+
+    // Fallback key if not provided (should be provided for secure tiers)
+    // Note: In a real scenario, password should be passed securely. 
+    // Here we use the user's password input as the decryption key.
+    // Use the environment variable for decryption key
+    // This requires the key to be prefixed with VITE_ in .env file
+    const decryptionKey = import.meta.env.VITE_DATA_ENCRYPTION_KEY || '';
+
     try {
       // Filter data sources based on tier
       const availableSources = dataSources.filter(source => {
-        if (tier === 'V') return true;
-        // Normal user logic: defaults to 'N' if undefined
-        const req = source.requiredTier || 'N';
-        return req === 'N';
+        // Default to 'N' access if not specified (backward compatibility)
+        const reqs = source.requiredTier || ['N'];
+        // Check if user's tier is in the allowed list
+        return reqs.includes(tier);
       });
 
-      // Simulate loading delay for better UX or handle actual async if needed
-      // With direct imports, data is already available
       const loadedDatasets: Dataset[] = await Promise.all(
         availableSources.map(async (source: DataSource) => {
           if (source.data) {
@@ -46,13 +54,50 @@ const App: React.FC = () => {
             };
           }
 
-          // Fallback for URL based sources (if any)
           if (source.url) {
             const response = await fetch(source.url);
             if (!response.ok) {
               throw new Error(`Failed to load ${source.name}`);
             }
             const data = await response.json();
+
+            // Decryption Logic
+            // If data has 'encryptedData' property, we try to decrypt
+            if (data.encryptedData) {
+              if (!decryptionKey) {
+                // Start as Guest or without password -> Access Denied to encrypted content
+                // But maybe allow if it's public? 
+                // Actually, if it is encrypted, we NEED the key.
+                // If no key (Guest login), they shouldn't see encrypted files anyway? 
+                // Wait, logic in dataService says Guest only sees 'sample_questions'. 
+                // Encrypted files are only for V (and maybe N).
+                throw new Error(`Encrypted content requires a valid password/key.`);
+              }
+
+              try {
+                const bytes = CryptoJS.AES.decrypt(data.encryptedData, decryptionKey);
+                const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+
+                if (!decryptedString) {
+                  throw new Error('Decryption Failed');
+                }
+
+                const decryptedData = JSON.parse(decryptedString);
+                return {
+                  id: source.id,
+                  name: source.name,
+                  url: source.url,
+                  examCode: source.examCode,
+                  examName: source.examName,
+                  data: decryptedData
+                };
+              } catch (e) {
+                console.error("Decryption failed for:", source.name);
+                throw new Error(`Failed to decrypt ${source.name}. Invalid password.`);
+              }
+            }
+
+            // Not encrypted (e.g. sample_questions.json or already plain array)
             return {
               id: source.id,
               name: source.name,
@@ -71,13 +116,19 @@ const App: React.FC = () => {
       setStage(AppStage.MENU);
     } catch (err) {
       console.error("Failed to load question banks:", err);
-      setError("문제 데이터를 불러오는 데 실패했습니다. 데이터 설정을 확인해주세요.");
+      // More specific error message if decryption failed
+      if ((err as Error).message.includes('Invalid password')) {
+        setError("데이터 복호화 실패: 비밀번호가 올바르지 않거나 데이터가 손상되었습니다.");
+      } else {
+        setError("문제 데이터를 불러오는 데 실패했습니다. 데이터 설정을 확인해주세요.");
+      }
     }
   };
 
-  const handleLogin = (tier: UserTier) => {
+  const handleLogin = (tier: UserTier, inputPassword?: string) => {
     setUserTier(tier);
-    loadData(tier);
+    // Pass password for decryption if available
+    loadData(tier, inputPassword);
   };
 
   const handleLogout = () => {
@@ -154,41 +205,71 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen text-gray-900 font-sans">
-      {stage === AppStage.LOGIN && <Login onLogin={handleLogin} />}
+    <div className="min-h-screen flex flex-col text-gray-900 font-sans bg-gray-50">
+      <main className="flex-grow flex flex-col w-full">
+        {stage === AppStage.LOGIN && <Login onLogin={handleLogin} />}
 
-      {stage === AppStage.MENU && (
-        <Menu onSelectMode={handleMenuSelect} onLogout={handleLogout} userTier={userTier} />
-      )}
+        {stage === AppStage.MENU && (
+          <Menu onSelectMode={handleMenuSelect} onLogout={handleLogout} userTier={userTier} />
+        )}
 
-      {stage === AppStage.STUDY && (
-        <Study onBack={handleBackToMenu} />
-      )}
+        {stage === AppStage.STUDY && (
+          <Study onBack={handleBackToMenu} />
+        )}
 
-      {stage === AppStage.SETUP && (
-        <Setup
-          datasets={datasets}
-          onStart={handleStartQuiz}
-          onBack={handleBackToMenu}
-          userTier={userTier}
-        />
-      )}
+        {stage === AppStage.SETUP && (
+          <Setup
+            datasets={datasets}
+            onStart={handleStartQuiz}
+            onBack={handleBackToMenu}
+            userTier={userTier}
+          />
+        )}
 
-      {stage === AppStage.QUIZ && config && (
-        <Quiz
-          questions={quizQuestions}
-          timeLimitMinutes={config.timeLimitMinutes}
-          onComplete={handleQuizComplete}
-        />
-      )}
+        {stage === AppStage.QUIZ && config && (
+          <Quiz
+            questions={quizQuestions}
+            timeLimitMinutes={config.timeLimitMinutes}
+            onComplete={handleQuizComplete}
+          />
+        )}
 
-      {stage === AppStage.RESULT && (
-        <Result
-          questions={quizQuestions}
-          userAnswers={userAnswers}
-          onRestart={handleBackToMenu}
-        />
-      )}
+        {stage === AppStage.RESULT && (
+          <Result
+            questions={quizQuestions}
+            userAnswers={userAnswers}
+            onRestart={handleBackToMenu}
+          />
+        )}
+      </main>
+
+      {/* Global Footer */}
+      <footer className="py-6 text-center text-sm text-gray-500 bg-gray-50 border-t border-gray-200 shrink-0">
+        <div className="flex flex-col items-center justify-center space-y-1">
+          <div>
+            <span className="font-semibold mr-2">blog :</span>
+            <a
+              href="https://janggiraffe.tistory.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors"
+            >
+              https://janggiraffe.tistory.com/
+            </a>
+          </div>
+          <div>
+            <span className="font-semibold mr-2">github :</span>
+            <a
+              href="https://github.com/jangGiraffe/Dump-Master-Lab"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors"
+            >
+              https://github.com/jangGiraffe/Dump-Master-Lab
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
