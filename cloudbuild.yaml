@@ -1,0 +1,52 @@
+steps:
+  # 1. GCS에서 설정 파일 및 데이터 다운로드
+  # 빌드 전에 필요한 파일들을 GCS 버킷에서 소스 코드로 가져옵니다.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Downloading configuration and data from GCS..."
+        
+        # public/dump 디렉토리 생성 (Vite 정적 자산용)
+        mkdir -p public/dump
+        
+        # services 폴더가 없으면 생성
+        mkdir -p services
+
+        # GCS에서 파일 다운로드 (경로는 버킷 구조에 맞게 조정 필요)
+        # 예: gs://my-bucket/config/dataService.tsx -> ./services/dataService.tsx
+        gsutil cp gs://${_GCS_BUCKET}/services/dataService.tsx ./services/dataService.tsx
+        gsutil cp gs://${_GCS_BUCKET}/services/pdfService.tsx ./services/pdfService.tsx
+        gsutil cp gs://${_GCS_BUCKET}/config.ts ./config.ts
+        
+        # dump 폴더의 내용을 public/dump로 복사 (재귀적, 병렬)
+        # public 폴더에 넣어야 빌드 시 dist/dump로 포함되어 웹에서 접근 가능합니다.
+        gsutil -m cp -r gs://${_GCS_BUCKET}/dump/* ./public/dump/
+
+  # 2. Docker 이미지 빌드
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/dump-master-lab', '.']
+
+  # 3. Docker 이미지 푸시 (Container Registry 또는 Artifact Registry)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/dump-master-lab']
+
+  # 4. Cloud Run 배포
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'dump-master-lab-service'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/dump-master-lab'
+      - '--region'
+      - 'asia-northeast3' # 서울 리전
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+# 변수 (트리거 설정에서 오버라이드 가능)
+substitutions:
+  _GCS_BUCKET: 'dump-master-lab' # GCS 버킷 이름으로 변경 필요

@@ -35,6 +35,20 @@
 3. **`config.ts.ex`** &rarr; **`config.ts`**
    - 앱 비밀번호 해시 및 기타 전역 설정을 관리하는 파일입니다.
 
+## 🚀 실행 방법 (Getting Started)
+
+1. **의존성 설치 (Install Dependencies)**
+   ```bash
+   npm install
+   ```
+
+2. **개발 서버 실행 (Run Dev Server)**
+   ```bash
+   npm run dev
+   ```
+   
+   이후 브라우저에서 `http://localhost:8080/` (또는 터미널에 표시된 주소)로 접속하여 확인합니다.
+
 ## 📂 문제 데이터 추가 (Adding Questions)
 
 새로운 문제 데이터를 추가하려면 `dump/` 폴더에 JSON 파일을 위치시켜야 합니다.
@@ -60,12 +74,4 @@
 
 작성한 JSON 파일은 `services/dataService.tsx`에서 import 하여 `dataSources` 배열에 추가하면 앱에 반영됩니다.
 
-## 🚀 실행 방법
 
-```bash
-# 의존성 설치
-npm install
-
-# 개발 서버 실행
-npm run dev
-```
