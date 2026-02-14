@@ -1,10 +1,10 @@
 import React from 'react';
-import { BookOpen, PenTool, LogOut } from 'lucide-react';
+import { BookOpen, PenTool, LogOut, BarChart2 } from 'lucide-react';
 
 import { UserTier } from '../types';
 
 interface MenuProps {
-  onSelectMode: (mode: 'quiz' | 'study') => void;
+  onSelectMode: (mode: 'quiz' | 'study' | 'history') => void;
   onLogout: () => void;
   userTier: UserTier | null;
 }
@@ -14,7 +14,6 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
     <div className="flex-grow bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="max-w-4xl w-full">
         <div className="flex flex-col items-center mb-10">
-          {/* Reduced title font size */}
           <h1 className="text-2xl md:text-3xl font-semibold text-center text-gray-900">
             Dump Master Lab
           </h1>
@@ -22,7 +21,6 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
             계속하려면 모드를 선택하세요
           </p>
 
-          {/* User Tier Badge */}
           {userTier && (
             <div className={`
               mt-4 mb-0 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border
@@ -38,7 +36,7 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {/* Quiz Mode Card */}
           <div
             onClick={() => onSelectMode('quiz')}
@@ -47,7 +45,6 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors text-primary">
               <PenTool className="w-8 h-8" />
             </div>
-            {/* Reduced card title font size */}
             <h2 className="text-xl font-semibold text-gray-800 mb-3">실전 모의고사</h2>
             <p className="text-gray-500 text-sm">
               실제 기출 문제, 시간 제한 설정 및 즉각적인 피드백으로 연습하세요.
@@ -88,6 +85,20 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
             </h2>
             <p className="text-gray-500 text-sm">
               PDF 가이드, 요약표, 참고 문서를 열람하고 학습하세요.
+            </p>
+          </div>
+
+          {/* History Mode Card */}
+          <div
+            onClick={() => onSelectMode('history')}
+            className="group bg-white p-8 rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-purple-300 transition-all cursor-pointer flex flex-col items-center text-center"
+          >
+            <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center mb-6 group-hover:bg-purple-600 group-hover:text-white transition-colors text-purple-600">
+              <BarChart2 className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">나의 기록</h2>
+            <p className="text-gray-500 text-sm">
+              과거 응시 기록과 점수 추이를 확인하세요.
             </p>
           </div>
         </div>

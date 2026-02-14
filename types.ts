@@ -30,7 +30,19 @@ export enum AppStage {
   SETUP = 'SETUP',
   STUDY = 'STUDY',
   QUIZ = 'QUIZ',
-  RESULT = 'RESULT'
+  RESULT = 'RESULT',
+  HISTORY = 'HISTORY'
+}
+
+export interface HistoryRecord {
+  id: string;
+  timestamp: number;
+  totalQuestions: number;
+  correctCount: number;
+  score: number;
+  timeTakenSeconds: number;
+  isPass: boolean;
+  examNames: string[]; // Versions used
 }
 
 

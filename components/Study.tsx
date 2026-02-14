@@ -54,8 +54,8 @@ export const Study: React.FC<StudyProps> = ({ onBack }) => {
                 key={doc.id}
                 onClick={() => handlePdfSelect(doc)}
                 className={`p-3 rounded-lg cursor-pointer transition-all border ${selectedPdf?.id === doc.id
-                    ? 'bg-blue-50 border-primary text-primary'
-                    : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-200 text-gray-700'
+                  ? 'bg-blue-50 border-primary text-primary'
+                  : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-200 text-gray-700'
                   }`}
               >
                 <div className="flex items-start">
@@ -78,9 +78,8 @@ export const Study: React.FC<StudyProps> = ({ onBack }) => {
 
       {/* Main Content - PDF Viewer */}
       <div className={`
-        flex-col h-full bg-gray-200 relative
-        md:flex md:flex-1
-        ${!showMobileList ? 'flex w-full h-full' : 'hidden'}
+        flex-col flex-1 bg-gray-200 relative
+        ${!showMobileList ? 'flex' : 'hidden md:flex'}
       `}>
         {/* Mobile Header with Back to List button */}
         <div className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm z-10 shrink-0">
@@ -98,14 +97,16 @@ export const Study: React.FC<StudyProps> = ({ onBack }) => {
         </div>
 
         {selectedPdf ? (
-          <iframe
-            src={getEmbedUrl(selectedPdf.link)}
-            className="w-full h-full border-none flex-1"
-            title={selectedPdf.title}
-            allow="autoplay"
-          />
+          <div className="flex-1 w-full overflow-hidden">
+            <iframe
+              src={getEmbedUrl(selectedPdf.link)}
+              className="w-full h-full border-none"
+              title={selectedPdf.title}
+              allow="autoplay"
+            />
+          </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
             <FileText className="w-16 h-16 mb-4 text-gray-300" />
             <p>문서를 선택하여 읽기를 시작하세요</p>
           </div>

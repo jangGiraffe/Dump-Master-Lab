@@ -7,15 +7,14 @@ interface ResultProps {
   questions: Question[];
   userAnswers: Record<string, string>;
   onRestart: () => void;
+  onRetryWrong: (wrongQuestions: Question[]) => void;
 }
 
-export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestart }) => {
+export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestart, onRetryWrong }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  let correctCount = 0;
-  questions.forEach(q => {
-    if (userAnswers[q.id] === q.answer) correctCount++;
-  });
+  const wrongQuestions = questions.filter(q => userAnswers[q.id] !== q.answer);
+  const correctCount = questions.length - wrongQuestions.length;
 
   const score = Math.round((correctCount / questions.length) * 100);
   const isPass = score >= 72; // Changed from 80 to 72
@@ -45,13 +44,24 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
           <p className="text-gray-600 mb-6 text-sm md:text-base">
             총 {questions.length}문제 중 {correctCount}문제를 맞히셨습니다.
           </p>
-          <button
-            onClick={onRestart}
-            className="flex items-center justify-center mx-auto bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors text-sm"
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            새 시험 응시하기
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mx-auto">
+            <button
+              onClick={onRestart}
+              className="flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg transition-colors text-sm w-full sm:w-auto"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              처음으로
+            </button>
+            {wrongQuestions.length > 0 && (
+              <button
+                onClick={() => onRetryWrong(wrongQuestions)}
+                className="flex items-center justify-center bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors text-sm w-full sm:w-auto"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                틀린 문제 다시 풀기 ({wrongQuestions.length})
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Review List */}
@@ -98,9 +108,9 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
                         const label = opt.split('.')[0].trim();
                         let optClass = "p-2 border rounded text-xs md:text-sm text-gray-600";
 
-                        if (label === q.answer) {
+                        if (q.answer.includes(label)) {
                           optClass = "p-2 border border-success bg-green-50 rounded text-xs md:text-sm font-medium text-green-900";
-                        } else if (label === userAnswer && userAnswer !== q.answer) {
+                        } else if (userAnswer && userAnswer.includes(label) && !q.answer.includes(label)) {
                           optClass = "p-2 border border-danger bg-red-50 rounded text-xs md:text-sm text-red-900";
                         }
 

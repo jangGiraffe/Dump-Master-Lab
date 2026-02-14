@@ -6,7 +6,9 @@ import { Setup } from './components/Setup';
 import { Study } from './components/Study';
 import { Quiz } from './components/Quiz';
 import { Result } from './components/Result';
+import { History } from './components/History';
 import { dataSources } from './services/dataService';
+import { historyService } from './services/historyService';
 import { shuffleArray, processRawQuestions } from './utils';
 import { Loader2 } from 'lucide-react';
 // Import crypto-js for decryption
@@ -136,11 +138,13 @@ const App: React.FC = () => {
     setDatasets([]);
   };
 
-  const handleMenuSelect = (mode: 'quiz' | 'study') => {
+  const handleMenuSelect = (mode: 'quiz' | 'study' | 'history') => {
     if (mode === 'quiz') {
       setStage(AppStage.SETUP);
-    } else {
+    } else if (mode === 'study') {
       setStage(AppStage.STUDY);
+    } else {
+      setStage(AppStage.HISTORY);
     }
   };
 
@@ -174,9 +178,33 @@ const App: React.FC = () => {
     setStage(AppStage.QUIZ);
   };
 
-  const handleQuizComplete = (answers: Record<string, string>) => {
+  const handleQuizComplete = (answers: Record<string, string>, timeLeft: number) => {
     setUserAnswers(answers);
+
+    if (config) {
+      const wrongCount = quizQuestions.filter(q => answers[q.id] !== q.answer).length;
+      const correctCount = quizQuestions.length - wrongCount;
+      const score = Math.round((correctCount / quizQuestions.length) * 100);
+      const isPass = score >= 72;
+      const timeTakenSeconds = (config.timeLimitMinutes * 60) - timeLeft;
+
+      historyService.saveRecord({
+        totalQuestions: quizQuestions.length,
+        correctCount,
+        score,
+        isPass,
+        timeTakenSeconds,
+        examNames: Array.from(new Set(quizQuestions.map(q => q.sourceVersion || 'Unknown')))
+      });
+    }
+
     setStage(AppStage.RESULT);
+  };
+
+  const handleRetryWrong = (wrongQuestions: Question[]) => {
+    setQuizQuestions(shuffleArray([...wrongQuestions]));
+    setUserAnswers({});
+    setStage(AppStage.QUIZ);
   };
 
   if (stage === AppStage.LOADING) {
@@ -205,8 +233,11 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col text-gray-900 font-sans bg-gray-50">
-      <main className="flex-grow flex flex-col w-full">
+    <div className={`text-gray-900 font-sans bg-gray-50 ${stage === AppStage.QUIZ || stage === AppStage.STUDY
+      ? 'h-screen overflow-hidden flex flex-col'
+      : 'min-h-screen flex flex-col'
+      }`}>
+      <main className={`flex-grow flex flex-col w-full ${stage === AppStage.QUIZ || stage === AppStage.STUDY ? 'overflow-hidden' : ''}`}>
         {stage === AppStage.LOGIN && <Login onLogin={handleLogin} />}
 
         {stage === AppStage.MENU && (
@@ -215,6 +246,10 @@ const App: React.FC = () => {
 
         {stage === AppStage.STUDY && (
           <Study onBack={handleBackToMenu} />
+        )}
+
+        {stage === AppStage.HISTORY && (
+          <History onBack={handleBackToMenu} />
         )}
 
         {stage === AppStage.SETUP && (
@@ -239,40 +274,43 @@ const App: React.FC = () => {
             questions={quizQuestions}
             userAnswers={userAnswers}
             onRestart={handleBackToMenu}
+            onRetryWrong={handleRetryWrong}
           />
         )}
       </main>
 
       {/* Global Footer - Only shown for non-immersive stages to prevent layout/scroll issues */}
-      {stage !== AppStage.QUIZ && stage !== AppStage.STUDY && (
-        <footer className="py-6 text-center text-sm text-gray-500 bg-gray-50 border-t border-gray-200 shrink-0">
-          <div className="flex flex-col items-center justify-center space-y-1">
-            <div>
-              <span className="font-semibold mr-2">blog :</span>
-              <a
-                href="https://janggiraffe.tistory.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline hover:text-blue-800 transition-colors break-all"
-              >
-                https://janggiraffe.tistory.com/
-              </a>
+      {
+        stage !== AppStage.QUIZ && stage !== AppStage.STUDY && stage !== AppStage.HISTORY && (
+          <footer className="py-6 text-center text-sm text-gray-500 bg-gray-50 border-t border-gray-200 shrink-0">
+            <div className="flex flex-col items-center justify-center space-y-1">
+              <div>
+                <span className="font-semibold mr-2">blog :</span>
+                <a
+                  href="https://janggiraffe.tistory.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline hover:text-blue-800 transition-colors break-all"
+                >
+                  https://janggiraffe.tistory.com/
+                </a>
+              </div>
+              <div>
+                <span className="font-semibold mr-2">github :</span>
+                <a
+                  href="https://github.com/jangGiraffe/Dump-Master-Lab"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline hover:text-blue-800 transition-colors break-all"
+                >
+                  https://github.com/jangGiraffe/Dump-Master-Lab
+                </a>
+              </div>
             </div>
-            <div>
-              <span className="font-semibold mr-2">github :</span>
-              <a
-                href="https://github.com/jangGiraffe/Dump-Master-Lab"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline hover:text-blue-800 transition-colors break-all"
-              >
-                https://github.com/jangGiraffe/Dump-Master-Lab
-              </a>
-            </div>
-          </div>
-        </footer>
-      )}
-    </div>
+          </footer>
+        )
+      }
+    </div >
   );
 };
 

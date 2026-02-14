@@ -103,10 +103,34 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   // Handle Answer Selection
   const handleSelectOption = useCallback((optionLabel: string) => {
     if (isFinishedRef.current) return;
-    setAnswers(prev => ({
-      ...prev,
-      [questions[currentIdx].id]: optionLabel
-    }));
+    const currentQ = questions[currentIdx];
+    const isMultiple = currentQ.answer.length > 1;
+
+    setAnswers(prev => {
+      const currentAnswer = prev[currentQ.id] || "";
+
+      if (isMultiple) {
+        // Toggle logic for multiple answers
+        let newAnswerArr = currentAnswer.split('').filter(s => s.length > 0);
+        if (newAnswerArr.includes(optionLabel)) {
+          newAnswerArr = newAnswerArr.filter(s => s !== optionLabel);
+        } else {
+          newAnswerArr.push(optionLabel);
+        }
+        const newAnswer = newAnswerArr.sort().join('');
+
+        return {
+          ...prev,
+          [currentQ.id]: newAnswer
+        };
+      } else {
+        // Standard radio logic for single answer
+        return {
+          ...prev,
+          [currentQ.id]: optionLabel
+        };
+      }
+    });
   }, [questions, currentIdx]);
 
   // Navigation Handlers
@@ -222,7 +246,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow p-4 md:p-6 max-w-4xl mx-auto w-full outline-none" tabIndex={0}>
+      <main className="flex-grow p-4 md:p-6 max-w-4xl mx-auto w-full outline-none overflow-y-auto" tabIndex={0}>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
 
           <div className="flex justify-between items-start mb-4">
@@ -233,6 +257,11 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
           <h2 className="text-lg md:text-xl font-medium text-gray-900 mb-6 leading-relaxed whitespace-pre-wrap">
             {currentQ.question}
+            {currentQ.answer.length > 1 && (
+              <span className="ml-2 inline-block bg-blue-100 text-primary text-[10px] px-1.5 py-0.5 rounded align-middle font-bold border border-blue-200">
+                복수 선택 ({currentQ.answer.length}개)
+              </span>
+            )}
           </h2>
 
           <hr className="border-t border-gray-200 my-6" />
@@ -247,7 +276,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
             <div className="space-y-3 mb-8">
               {currentQ.options.map((opt, idx) => {
                 const label = getOptionLabel(opt);
-                const isSelected = selectedAnswer === label;
+                const isSelected = selectedAnswer ? selectedAnswer.includes(label) : false;
 
                 return (
                   <div
