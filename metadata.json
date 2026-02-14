@@ -1,0 +1,5 @@
+{
+  "name": "AWS Certification Exam Simulator",
+  "description": "A secure, customizable exam simulation tool supporting multiple question banks, timed tests, and detailed explanations.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,36 @@
+
+[
+  {
+    "question": "AWS의 클라우드 컴퓨팅 서비스 중 '서버리스' 컴퓨팅을 제공하는 서비스는 무엇입니까?",
+    "options": [
+      "A. Amazon EC2",
+      "B. AWS Lambda",
+      "C. Amazon RDS",
+      "D. Amazon EBS"
+    ],
+    "answer": "B",
+    "explanation": "AWS Lambda는 서버를 프로비저닝하거나 관리하지 않고도 코드를 실행할 수 있게 해주는 이벤트 중심의 서버리스 컴퓨팅 서비스입니다."
+  },
+  {
+    "question": "S3 버킷의 객체에 대해 데이터 무결성을 확인하기 위해 사용하는 값은 무엇입니까?",
+    "options": [
+      "A. ETag (Entity Tag)",
+      "B. Instance ID",
+      "C. VPC ID",
+      "D. IAM Role ARN"
+    ],
+    "answer": "A",
+    "explanation": "ETag(엔티티 태그)는 객체의 특정 버전을 나타내는 해시입니다. S3에 업로드된 객체의 무결성을 검증하는 데 자주 사용됩니다."
+  },
+  {
+    "question": "관계형 데이터베이스 서비스로, 확장성이 뛰어나고 관리가 용이한 AWS 서비스는?",
+    "options": [
+      "A. Amazon DynamoDB",
+      "B. Amazon Redshift",
+      "C. Amazon RDS",
+      "D. Amazon ElastiCache"
+    ],
+    "answer": "C",
+    "explanation": "Amazon RDS(Relational Database Service)는 클라우드에서 관계형 데이터베이스를 간편하게 설정, 운영 및 확장할 수 있는 관리형 서비스입니다."
+  }
+]
