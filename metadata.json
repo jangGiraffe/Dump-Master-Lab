@@ -1,5 +1,5 @@
 {
-  "name": "AWS Certification Exam Simulator",
-  "description": "A secure, customizable exam simulation tool supporting multiple question banks, timed tests, and detailed explanations.",
+  "name": "Dump Master Lab",
+  "description": "덤프파일을 기반으로 문제 은행 및 학습자료를 제공하는 서비스",
   "requestFramePermissions": []
 }

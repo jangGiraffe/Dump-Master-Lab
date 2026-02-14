@@ -1,7 +1,7 @@
 
-# AWS Certification Exam Simulator
+# Dump Master Lab
 
-이 프로젝트는 AWS 자격증 시험을 대비하기 위한 웹 기반 모의고사 시뮬레이터입니다. 사용자 정의 가능한 문제 은행, 타이머, 상세 해설 기능을 제공합니다.
+덤프파일을 기반으로 문제 은행 및 학습자료를 제공하는 서비스입니다.
 
 ## � 서비스 미리보기 (Service Preview)
 
