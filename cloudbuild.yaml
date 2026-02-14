@@ -50,3 +50,6 @@ steps:
 # 변수 (트리거 설정에서 오버라이드 가능)
 substitutions:
   _GCS_BUCKET: 'dump-master-lab' # GCS 버킷 이름으로 변경 필요
+
+options:
+  logging: CLOUD_LOGGING_ONLY
