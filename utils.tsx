@@ -2,13 +2,24 @@ import { Question } from './types';
 import { APP_CONFIG } from './config';
 
 // Password verification using config file
-const TARGET_HASH = APP_CONFIG.PASSWORD_HASH;
+// Helper to hash password
+const sha256 = async (message: string) => {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+};
 
-export const verifyPassword = (input: string): boolean => {
+export const authenticateUser = async (input: string): Promise<'N' | 'V' | null> => {
   try {
-    return btoa(input) === TARGET_HASH;
+    const inputHash = await sha256(input);
+    if (inputHash === APP_CONFIG.NORMAL_PASSWORD_HASH) return 'N';
+    if (inputHash === APP_CONFIG.VIP_PASSWORD_HASH) return 'V';
+    return null;
   } catch (e) {
-    return false;
+    console.error("Crypto error", e);
+    return null;
   }
 };
 

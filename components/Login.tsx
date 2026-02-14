@@ -1,22 +1,35 @@
 import React, { useState } from 'react';
-import { verifyPassword } from '../utils';
+import { authenticateUser } from '../utils';
+import { UserTier } from '../types';
 import { Lock } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (tier: UserTier) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (verifyPassword(password)) {
-      onLogin();
-    } else {
-      setError('비밀번호가 올바르지 않습니다.');
-      setPassword('');
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const tier = await authenticateUser(password);
+      if (tier) {
+        onLogin(tier);
+      } else {
+        setError('비밀번호가 올바르지 않습니다.');
+        setPassword('');
+      }
+    } catch (err) {
+      setError('로그인 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -47,9 +60,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           {error && <p className="text-danger text-sm text-center">{error}</p>}
           <button
             type="submit"
-            className="w-full bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"
+            className={`w-full bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            disabled={isLoading}
           >
-            시작하기
+            {isLoading ? '확인 중...' : '시작하기'}
           </button>
         </form>
       </div>

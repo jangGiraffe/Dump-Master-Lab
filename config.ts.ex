@@ -1,10 +1,17 @@
-
 // 비밀번호 및 앱 설정을 관리하는 파일입니다.
 // .env 파일은 변경 시 서버 재시작이 필요할 수 있으므로, 이곳에서 설정하면 바로 적용됩니다.
 
+/*
+  비밀번호 변경 방법:
+  1. `hash-generator.html` 파일을 브라우저에서 엽니다.
+  2. 원하는 새 비밀번호를 입력합니다.
+  3. 생성된 'SHA-256 해시값'을 복사합니다.
+  4. 아래의 기존 해시값을 복사한 값으로 교체합니다.
+*/
+
 export const APP_CONFIG = {
-  // 비밀번호 해시 설정 (Base64 인코딩)
-  // 브라우저 콘솔에서 btoa('원하는비밀번호') 를 입력하여 나온 값을 아래 문자열에 넣으세요.
-  // 기본값 (janggiraffe): "amFuZ2dpcmFmZmU="
-  PASSWORD_HASH: "amFuZ2dpcmFmZmU=" 
+  // 일반 유저 비밀번호 (akis) SHA-256 Hash
+  NORMAL_PASSWORD_HASH: "주석을 참고해서 비밀번호를 설정하세요",
+  // 프리미엄 유저 비밀번호 (akis_ninja) SHA-256 Hash
+  VIP_PASSWORD_HASH: "주석을 참고해서 비밀번호를 설정하세요"
 };

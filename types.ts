@@ -33,9 +33,15 @@ export enum AppStage {
   RESULT = 'RESULT'
 }
 
+
+export type UserTier = 'N' | 'V'; // N: Normal, V: VIP
+
 export interface DataSource {
   id: string;
   name: string;
+  examCode?: string; // e.g., 'MLA-C01'
+  examName?: string; // e.g., 'AWS Certified Machine Learning - Specialty'
+  requiredTier?: UserTier; // Minimum tier required to access
   url?: string;
   data?: any[]; // Pre-loaded data
 }

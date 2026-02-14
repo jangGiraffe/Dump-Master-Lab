@@ -2,6 +2,7 @@
 # Ignore all files in dump directory
 dump/*
 !dump/sample_questions.json
+!dump/MLA-C01-100Q-by-Gemini.json
 
 # Ignore specific files
 config.ts

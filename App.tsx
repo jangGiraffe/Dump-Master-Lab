@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppStage, QuizConfig, Question, Dataset, DataSource } from './types';
+import { AppStage, QuizConfig, Question, Dataset, DataSource, UserTier } from './types';
 import { Login } from './components/Login';
 import { Menu } from './components/Menu';
 import { Setup } from './components/Setup';
@@ -12,29 +12,40 @@ import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [stage, setStage] = useState<AppStage>(AppStage.LOGIN);
+  const [userTier, setUserTier] = useState<UserTier | null>(null);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [quizQuestions, setQuizQuestions] = useState<Question[]>([]);
   const [config, setConfig] = useState<QuizConfig | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>('');
 
-  const loadData = async () => {
+  const loadData = async (tier: UserTier) => {
     setStage(AppStage.LOADING);
     setError('');
     try {
+      // Filter data sources based on tier
+      const availableSources = dataSources.filter(source => {
+        if (tier === 'V') return true;
+        // Normal user logic: defaults to 'N' if undefined
+        const req = source.requiredTier || 'N';
+        return req === 'N';
+      });
+
       // Simulate loading delay for better UX or handle actual async if needed
       // With direct imports, data is already available
       const loadedDatasets: Dataset[] = await Promise.all(
-        dataSources.map(async (source: DataSource) => {
+        availableSources.map(async (source: DataSource) => {
           if (source.data) {
             return {
               id: source.id,
               name: source.name,
               url: source.url || '',
+              examCode: source.examCode,
+              examName: source.examName,
               data: source.data
             };
           }
-          
+
           // Fallback for URL based sources (if any)
           if (source.url) {
             const response = await fetch(source.url);
@@ -46,14 +57,16 @@ const App: React.FC = () => {
               id: source.id,
               name: source.name,
               url: source.url,
+              examCode: source.examCode,
+              examName: source.examName,
               data: data
             };
           }
-          
+
           throw new Error(`Invalid data source: ${source.name}`);
         })
       );
-      
+
       setDatasets(loadedDatasets);
       setStage(AppStage.MENU);
     } catch (err) {
@@ -62,8 +75,9 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogin = () => {
-    loadData();
+  const handleLogin = (tier: UserTier) => {
+    setUserTier(tier);
+    loadData(tier);
   };
 
   const handleLogout = () => {
@@ -88,10 +102,10 @@ const App: React.FC = () => {
 
   const handleStartQuiz = (newConfig: QuizConfig) => {
     setConfig(newConfig);
-    
+
     // 1. Filter datasets based on selection
     const selectedData = datasets.filter(ds => newConfig.selectedVersions.includes(ds.id));
-    
+
     // 2. Process raw data into Question objects with IDs
     let allQuestions: Question[] = [];
     selectedData.forEach(ds => {
@@ -118,16 +132,16 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-800">
         {error ? (
-           <div className="text-danger p-4 bg-red-50 border border-red-200 rounded-lg max-w-md text-center">
-             <h3 className="font-bold text-lg mb-2">오류</h3>
-             <p className="mb-4">{error}</p>
-             <button 
-               onClick={() => setStage(AppStage.LOGIN)}
-               className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-medium transition-colors"
-             >
-               로그인 화면으로 돌아가기
-             </button>
-           </div>
+          <div className="text-danger p-4 bg-red-50 border border-red-200 rounded-lg max-w-md text-center">
+            <h3 className="font-bold text-lg mb-2">오류</h3>
+            <p className="mb-4">{error}</p>
+            <button
+              onClick={() => setStage(AppStage.LOGIN)}
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-medium transition-colors"
+            >
+              로그인 화면으로 돌아가기
+            </button>
+          </div>
         ) : (
           <div className="flex flex-col items-center">
             <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
@@ -142,25 +156,26 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen text-gray-900 font-sans">
       {stage === AppStage.LOGIN && <Login onLogin={handleLogin} />}
-      
+
       {stage === AppStage.MENU && (
-        <Menu onSelectMode={handleMenuSelect} onLogout={handleLogout} />
+        <Menu onSelectMode={handleMenuSelect} onLogout={handleLogout} userTier={userTier} />
       )}
 
       {stage === AppStage.STUDY && (
         <Study onBack={handleBackToMenu} />
       )}
-      
+
       {stage === AppStage.SETUP && (
-        <Setup 
-          datasets={datasets} 
+        <Setup
+          datasets={datasets}
           onStart={handleStartQuiz}
           onBack={handleBackToMenu}
+          userTier={userTier}
         />
       )}
 
       {stage === AppStage.QUIZ && config && (
-        <Quiz 
+        <Quiz
           questions={quizQuestions}
           timeLimitMinutes={config.timeLimitMinutes}
           onComplete={handleQuizComplete}
@@ -168,7 +183,7 @@ const App: React.FC = () => {
       )}
 
       {stage === AppStage.RESULT && (
-        <Result 
+        <Result
           questions={quizQuestions}
           userAnswers={userAnswers}
           onRestart={handleBackToMenu}

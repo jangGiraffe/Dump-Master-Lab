@@ -1,22 +1,40 @@
 import React from 'react';
 import { BookOpen, PenTool, LogOut } from 'lucide-react';
 
+import { UserTier } from '../types';
+
 interface MenuProps {
   onSelectMode: (mode: 'quiz' | 'study') => void;
   onLogout: () => void;
+  userTier: UserTier | null;
 }
 
-export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout }) => {
+export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="max-w-4xl w-full">
-        {/* Reduced title font size */}
-        <h1 className="text-2xl md:text-3xl font-semibold text-center text-gray-900 mb-2">
-          Dump Master Lab
-        </h1>
-        <p className="text-gray-500 text-center mb-12 text-sm md:text-base">
-          계속하려면 모드를 선택하세요
-        </p>
+        <div className="flex flex-col items-center mb-10">
+          {/* Reduced title font size */}
+          <h1 className="text-2xl md:text-3xl font-semibold text-center text-gray-900">
+            Dump Master Lab
+          </h1>
+          <p className="text-gray-500 text-center mt-2 text-sm md:text-base">
+            계속하려면 모드를 선택하세요
+          </p>
+
+          {/* User Tier Badge */}
+          {userTier && (
+            <div className={`
+              mt-4 mb-0 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border
+              ${userTier === 'V'
+                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                : 'bg-blue-50 text-blue-700 border-blue-200'
+              }
+            `}>
+              {userTier === 'V' ? '👑 VIP 회원' : '😊 일반 회원'}
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
           {/* Quiz Mode Card */}
@@ -36,14 +54,36 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout }) => {
 
           {/* Study Mode Card */}
           <div
-            onClick={() => onSelectMode('study')}
-            className="group bg-white p-8 rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-success/30 transition-all cursor-pointer flex flex-col items-center text-center"
+            onClick={() => {
+              if (userTier === 'V') {
+                onSelectMode('study');
+              }
+            }}
+            className={`group bg-white p-8 rounded-2xl shadow-sm border border-gray-200 transition-all flex flex-col items-center text-center relative
+              ${userTier === 'V'
+                ? 'hover:shadow-xl hover:border-success/30 cursor-pointer'
+                : 'opacity-60 cursor-not-allowed'
+              }`}
           >
-            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-6 group-hover:bg-success group-hover:text-white transition-colors text-success">
+            {userTier !== 'V' && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-900/10 rounded-2xl opacity-0 hover:opacity-100 transition-opacity z-10 backdrop-blur-[1px]">
+                <span className="bg-black/80 text-white text-sm py-2 px-4 rounded shadow-lg font-medium">
+                  👑 VIP 회원만 이용 가능합니다
+                </span>
+              </div>
+            )}
+
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 transition-colors 
+              ${userTier === 'V'
+                ? 'bg-green-50 text-success group-hover:bg-success group-hover:text-white'
+                : 'bg-gray-100 text-gray-400'
+              }`}>
               <BookOpen className="w-8 h-8" />
             </div>
-            {/* Reduced card title font size */}
-            <h2 className="text-xl font-semibold text-gray-800 mb-3">학습 자료실</h2>
+
+            <h2 className={`text-xl font-semibold mb-3 ${userTier === 'V' ? 'text-gray-800' : 'text-gray-500'}`}>
+              학습 자료실
+            </h2>
             <p className="text-gray-500 text-sm">
               PDF 가이드, 요약표, 참고 문서를 열람하고 학습하세요.
             </p>
