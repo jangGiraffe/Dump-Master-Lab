@@ -18,7 +18,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const [showExplanation, setShowExplanation] = useState(false);
   const [showTutorial, setShowTutorial] = useState(true);
   const [showToast, setShowToast] = useState(false);
-  
+
   // Use ref to track if quiz is finished to prevent multiple submissions
   const isFinishedRef = useRef(false);
   // Ref for explanation section to scroll into view
@@ -72,13 +72,13 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   // Handle Copy Question for AI
   const handleCopyQuestion = useCallback(async () => {
     const currentQ = questions[currentIdx];
-    
+
     // Determine full answer text
     let answerText = currentQ.answer;
     if (currentQ.options && currentQ.options.length > 0) {
       // Handle multiple answers (e.g. "AD") or single "A"
       const correctLabels = currentQ.answer.split('').map(s => s.trim());
-      
+
       const foundOptions = currentQ.options.filter(opt => {
         const label = getOptionLabel(opt);
         return correctLabels.includes(label);
@@ -90,7 +90,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     }
 
     const text = `${currentQ.question}은 이건데, 답이 ${answerText} 이거야. 왜그런지 설명해줘.`;
-    
+
     try {
       await navigator.clipboard.writeText(text);
       setShowToast(true);
@@ -159,12 +159,12 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       } else if (key === 'A' || key === 'ARROWLEFT') {
         handlePrev();
       }
-      
+
       // Explanation Toggle (Unified S or Down)
       else if (key === 'S' || key === 'ARROWDOWN') {
         setShowExplanation(prev => !prev);
       }
-      
+
       // Copy Question (C)
       else if (key === 'C') {
         handleCopyQuestion();
@@ -190,7 +190,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
   // Render Component
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col flex-grow bg-gray-50">
       {/* Tutorial Modal */}
       {showTutorial && <QuizTutorial onStart={() => setShowTutorial(false)} />}
 
@@ -207,12 +207,12 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
         </div>
         <div className="flex items-center">
           <div className="w-32 bg-gray-200 rounded-full h-2.5 mr-4 hidden sm:block">
-            <div 
-              className="bg-primary h-2.5 rounded-full transition-all duration-300" 
+            <div
+              className="bg-primary h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
             ></div>
           </div>
-          <button 
+          <button
             onClick={handleFinish}
             className="bg-success hover:bg-green-600 text-white text-sm font-semibold py-1.5 px-4 rounded transition-colors"
           >
@@ -224,7 +224,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       {/* Main Content */}
       <main className="flex-grow p-4 md:p-6 max-w-4xl mx-auto w-full outline-none" tabIndex={0}>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
-          
+
           <div className="flex justify-between items-start mb-4">
             <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded font-medium mb-2">
               출처: {currentQ.sourceVersion}
@@ -248,9 +248,9 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
               {currentQ.options.map((opt, idx) => {
                 const label = getOptionLabel(opt);
                 const isSelected = selectedAnswer === label;
-                
+
                 return (
-                  <div 
+                  <div
                     key={idx}
                     onClick={() => handleSelectOption(label)}
                     className={`
@@ -305,7 +305,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
             </div>
 
             {showExplanation && (
-              <div 
+              <div
                 ref={explanationRef}
                 className="p-4 bg-yellow-50 border border-warning/30 rounded-lg text-gray-800 animate-fadeIn text-sm scroll-mt-20"
               >

@@ -75,4 +75,4 @@ VITE_DATA_ENCRYPTION_KEY=your-secret-key-here
 
 * **VIP 회원**: 프리미엄 비밀번호로 로그인하며, 모든 문제 은행에 제한 없이 접근 가능합니다.
 * **일반 회원**: 일반 비밀번호로 로그인하며, 각 덤프의 **5문제 미리보기**만 가능합니다.
-* **Guest (체험하기)**: 비밀번호 없이 체험판 문제(`sample_questions.json`)만 이용 가능합니다.
+* **Guest (체험하기)**: 비밀번호 없이 체험판 문제(`sample_questions.json`, `MLA-C01-100Q-by-Gemini.json`)만 이용 가능합니다.

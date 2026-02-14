@@ -25,9 +25,9 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="flex flex-col flex-grow bg-gray-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
-        
+
         {/* Score Card */}
         <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">시험 결과</h2>
@@ -64,7 +64,7 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
 
             return (
               <div key={q.id} className={`bg-white rounded-lg shadow-sm border ${isCorrect ? 'border-gray-200' : 'border-red-200'} overflow-hidden`}>
-                <div 
+                <div
                   onClick={() => toggleExpand(q.id)}
                   className="p-4 cursor-pointer hover:bg-gray-50 flex items-start gap-4"
                 >
@@ -92,12 +92,12 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
                 {isExpanded && (
                   <div className="p-4 border-t bg-gray-50/50">
                     <p className="whitespace-pre-wrap text-gray-800 mb-4 font-medium text-sm md:text-base">{q.question}</p>
-                    
+
                     <div className="space-y-2 mb-4">
                       {q.options.map((opt, i) => {
                         const label = opt.split('.')[0].trim();
                         let optClass = "p-2 border rounded text-xs md:text-sm text-gray-600";
-                        
+
                         if (label === q.answer) {
                           optClass = "p-2 border border-success bg-green-50 rounded text-xs md:text-sm font-medium text-green-900";
                         } else if (label === userAnswer && userAnswer !== q.answer) {

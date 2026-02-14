@@ -243,33 +243,35 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Global Footer */}
-      <footer className="py-6 text-center text-sm text-gray-500 bg-gray-50 border-t border-gray-200 shrink-0">
-        <div className="flex flex-col items-center justify-center space-y-1">
-          <div>
-            <span className="font-semibold mr-2">blog :</span>
-            <a
-              href="https://janggiraffe.tistory.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors"
-            >
-              https://janggiraffe.tistory.com/
-            </a>
+      {/* Global Footer - Only shown for non-immersive stages to prevent layout/scroll issues */}
+      {stage !== AppStage.QUIZ && stage !== AppStage.STUDY && (
+        <footer className="py-6 text-center text-sm text-gray-500 bg-gray-50 border-t border-gray-200 shrink-0">
+          <div className="flex flex-col items-center justify-center space-y-1">
+            <div>
+              <span className="font-semibold mr-2">blog :</span>
+              <a
+                href="https://janggiraffe.tistory.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline hover:text-blue-800 transition-colors break-all"
+              >
+                https://janggiraffe.tistory.com/
+              </a>
+            </div>
+            <div>
+              <span className="font-semibold mr-2">github :</span>
+              <a
+                href="https://github.com/jangGiraffe/Dump-Master-Lab"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline hover:text-blue-800 transition-colors break-all"
+              >
+                https://github.com/jangGiraffe/Dump-Master-Lab
+              </a>
+            </div>
           </div>
-          <div>
-            <span className="font-semibold mr-2">github :</span>
-            <a
-              href="https://github.com/jangGiraffe/Dump-Master-Lab"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors"
-            >
-              https://github.com/jangGiraffe/Dump-Master-Lab
-            </a>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 };
