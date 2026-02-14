@@ -10,8 +10,8 @@
 */
 
 export const APP_CONFIG = {
-  // 일반 유저 비밀번호 (akis) SHA-256 Hash
+  // 일반 유저 비밀번호 (비밀번호1) SHA-256 Hash
   NORMAL_PASSWORD_HASH: "주석을 참고해서 비밀번호를 설정하세요",
-  // 프리미엄 유저 비밀번호 (akis_ninja) SHA-256 Hash
+  // 프리미엄 유저 비밀번호 (비밀번호2) SHA-256 Hash
   VIP_PASSWORD_HASH: "주석을 참고해서 비밀번호를 설정하세요"
 };

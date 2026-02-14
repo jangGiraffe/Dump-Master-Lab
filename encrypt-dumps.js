@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 // Configuration
 const SOURCE_DIR = path.join(__dirname, 'unencrypted-dumps');
-const DUMP_DIR = path.join(__dirname, 'public', 'dump');
+const DUMP_DIR = path.join(__dirname, 'dump');
 const SECRET_KEY = process.env.VITE_DATA_ENCRYPTION_KEY;
 
 if (!SECRET_KEY) {
