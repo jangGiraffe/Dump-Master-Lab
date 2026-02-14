@@ -56,6 +56,7 @@ VITE_DATA_ENCRYPTION_KEY=your-secret-key-here
 4. **`services/dataService.tsx`**에 해당 파일 정보를 등록하여 앱에 표시되도록 합니다.
 
 > **Note**: `sample_questions.json`은 공개용이므로 암호화되지 않고 그대로 복사됩니다.
+> **Note**: `MLA-C01-100Q-by-Gemini.json`은 공개용이지만 암호화하였습니다.
 
 ## 🚀 실행 방법 (Getting Started)
 
@@ -73,5 +74,5 @@ VITE_DATA_ENCRYPTION_KEY=your-secret-key-here
 ## 🔐 접근 권한 (Access Tiers)
 
 * **VIP 회원**: 프리미엄 비밀번호로 로그인하며, 모든 문제 은행에 제한 없이 접근 가능합니다.
-* **일반 회원**: 일반 비밀번호(`akis`)로 로그인하며, 각 덤프의 **5문제 미리보기**만 가능합니다.
+* **일반 회원**: 일반 비밀번호로 로그인하며, 각 덤프의 **5문제 미리보기**만 가능합니다.
 * **Guest (체험하기)**: 비밀번호 없이 체험판 문제(`sample_questions.json`)만 이용 가능합니다.
