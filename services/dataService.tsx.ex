@@ -28,6 +28,6 @@ export const dataSources = [
     url: 'dump/MLA-C01-100Q-by-Gemini.json',
     examCode: 'MLA-C01',
     examName: 'AWS Certified Machine Learning - Specialty',
-    requiredTier: ['N', 'V']
+    requiredTier: ['G','N', 'V']
   }
 ];
