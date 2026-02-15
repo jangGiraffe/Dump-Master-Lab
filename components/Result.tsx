@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Question } from '../types';
+import { ResultCharacter } from '../utils';
 import { CheckCircle, XCircle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ResultProps {
@@ -30,6 +31,9 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
         {/* Score Card */}
         <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">시험 결과</h2>
+          <div className="flex justify-center items-center mb-4">
+            <ResultCharacter score={score} size={140} />
+          </div>
           <div className="flex justify-center items-center mb-6">
             <div className={`text-5xl font-bold ${isPass ? 'text-success' : 'text-danger'}`}>
               {score}%

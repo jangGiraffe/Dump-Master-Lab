@@ -24,19 +24,19 @@
 
 | 메인 화면 | PDF 학습 자료 뷰어 |
 | :---: | :---: |
-| <img src="img/main.png" width="400"/> | <img src="img/pdfview.png" width="400"/> |
+| <img src="img/md/main.png" width="400"/> | <img src="img/md/pdfview.png" width="400"/> |
 
 | 퀴즈 풀이 화면 1 | 퀴즈 풀이 화면 2 |
 | :---: | :---: |
-| <img src="img/quiz1.png" width="400"/> | <img src="img/quiz2.png" width="400"/> |
+| <img src="img/md/quiz1.png" width="400"/> | <img src="img/md/quiz2.png" width="400"/> |
 
 | 결과 분석 화면 1 | 결과 분석 화면 2 |
 | :---: | :---: |
-| <img src="img/result1.png" width="400"/> | <img src="img/result2.png" width="400"/> |
+| <img src="img/md/result1.png" width="400"/> | <img src="img/md/result2.png" width="400"/> |
 
 | 설정 화면 1 | 설정 화면 2 |
 | :---: | :---: |
-| <img src="img/setting1.png" width="400"/> | <img src="img/setting2.png" width="400"/> |
+| <img src="img/md/setting1.png" width="400"/> | <img src="img/md/setting2.png" width="400"/> |
 
 
 ## 🛠️ 초기 설정 (Configuration)

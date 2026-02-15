@@ -73,10 +73,23 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
     }
   }, [selectedVersions, currentDatasets, selectedExam, userTier]);
 
-  // Reset selection when exam changes
+  // Reset selection when exam changes — default to first item
   useEffect(() => {
-    setSelectedVersions([]);
-  }, [selectedExam]);
+    if (selectedExam) {
+      const sorted = datasets
+        .filter(d => (d.examCode || 'Uncategorized') === selectedExam)
+        .sort((a, b) => {
+          const isAKR = a.name.includes('(KR)');
+          const isBKR = b.name.includes('(KR)');
+          if (isAKR && !isBKR) return -1;
+          if (!isAKR && isBKR) return 1;
+          return a.name.localeCompare(b.name);
+        });
+      setSelectedVersions(sorted.length > 0 ? [sorted[0].id] : []);
+    } else {
+      setSelectedVersions([]);
+    }
+  }, [selectedExam, datasets]);
 
   const toggleVersion = (id: string) => {
     setSelectedVersions(prev =>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { HistoryRecord } from '../types';
 import { historyService } from '../services/historyService';
-import { formatTime } from '../utils';
+import { formatTime, ResultCharacter } from '../utils';
 import { ChevronLeft, Trash2, Calendar, Award, Clock, BarChart2 } from 'lucide-react';
 
 interface HistoryProps {
@@ -65,6 +65,9 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
                                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 transition-all hover:shadow-md"
                             >
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="flex-shrink-0">
+                                        <ResultCharacter score={record.score} size={64} />
+                                    </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

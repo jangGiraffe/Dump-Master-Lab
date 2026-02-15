@@ -214,7 +214,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
   // Render Component
   return (
-    <div className="flex flex-col flex-grow bg-gray-50">
+    <div className="flex flex-col flex-grow bg-gray-50 min-h-0 overflow-hidden">
       {/* Tutorial Modal */}
       {showTutorial && <QuizTutorial onStart={() => setShowTutorial(false)} />}
 
@@ -246,7 +246,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow p-4 md:p-6 max-w-4xl mx-auto w-full outline-none overflow-y-auto" tabIndex={0}>
+      <main className="flex-grow min-h-0 p-4 md:p-6 max-w-4xl mx-auto w-full outline-none overflow-y-auto" tabIndex={0}>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
 
           <div className="flex justify-between items-start mb-4">
