@@ -18,6 +18,11 @@ RUN echo 'server { \
         index index.html index.htm; \
         try_files $uri $uri/ /index.html; \
     } \
+    location ~* \.(?:ico|gif|jpe?g|png|svg|webp)$ { \
+        root /usr/share/nginx/html; \
+        expires 7d; \
+        add_header Cache-Control "public"; \
+    } \
 }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 8080

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Question } from '../types';
 import { ResultCharacter } from '../utils';
-import { CheckCircle, XCircle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, XCircle, RotateCcw, ChevronDown, ChevronUp, Copy } from 'lucide-react';
 
 interface ResultProps {
   questions: Question[];
@@ -13,6 +13,8 @@ interface ResultProps {
 
 export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestart, onRetryWrong }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
   const wrongQuestions = questions.filter(q => userAnswers[q.id] !== q.answer);
   const correctCount = questions.length - wrongQuestions.length;
@@ -21,7 +23,15 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
   const isPass = score >= 72; // Changed from 80 to 72
 
   const toggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
+    const isExpanding = expandedId !== id;
+    setExpandedId(isExpanding ? id : null);
+
+    if (isExpanding) {
+      setTimeout(() => {
+        itemRefs.current[id]?.focus({ preventScroll: false });
+        itemRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    }
   };
 
   return (
@@ -77,10 +87,15 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
             const isExpanded = expandedId === q.id;
 
             return (
-              <div key={q.id} className={`bg-white rounded-lg shadow-sm border ${isCorrect ? 'border-gray-200' : 'border-red-200'} overflow-hidden`}>
+              <div
+                key={q.id}
+                ref={el => itemRefs.current[q.id] = el}
+                tabIndex={-1}
+                className={`bg-white rounded-lg shadow-sm border ${isCorrect ? 'border-gray-200' : 'border-red-200'} overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary/20`}
+              >
                 <div
                   onClick={() => toggleExpand(q.id)}
-                  className="p-4 cursor-pointer hover:bg-gray-50 flex items-start gap-4"
+                  className="p-4 cursor-pointer hover:bg-gray-50 flex items-start gap-4 group"
                 >
                   <div className="mt-1">
                     {isCorrect ? (
@@ -126,9 +141,36 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
                       })}
                     </div>
 
-                    <div className="bg-yellow-50 p-3 rounded border border-yellow-100 text-xs md:text-sm">
+                    <div className="bg-yellow-50 p-3 rounded border border-yellow-100 text-xs md:text-sm mb-4">
                       <p className="font-semibold text-warning/90 mb-1">해설:</p>
                       <p className="text-gray-700 whitespace-pre-wrap">{q.explanation}</p>
+                    </div>
+
+                    <div className="flex justify-start">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const getFullText = (labels: string) => {
+                            if (!q.options || q.options.length === 0) return labels;
+                            const labelArr = labels.split('').map(s => s.trim());
+                            const matched = q.options.filter(opt => labelArr.includes(opt.split('.')[0].trim()));
+                            return matched.length > 0 ? matched.join(', ') : labels;
+                          };
+                          const correctText = getFullText(q.answer);
+                          const userText = userAnswer ? getFullText(userAnswer) : "선택하지 않음";
+                          const allOptionsText = q.options.join('\n');
+                          const text = `${q.question} 에 대한 답은 ${correctText} 이고, 나는 ${userText}을 골랐어. 알려줘.\n다른 선택지는\n${allOptionsText}\n 이 있어.설명을 부탁해. \n시험 대비 팁도 알려줘.`;
+
+                          navigator.clipboard.writeText(text).then(() => {
+                            setCopiedId(q.id);
+                            setTimeout(() => setCopiedId(null), 2000);
+                          });
+                        }}
+                        className={`flex items-center text-xs font-medium px-3 py-1.5 rounded transition-all shadow-sm ${copiedId === q.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        <Copy className="w-3.5 h-3.5 mr-1.5" />
+                        {copiedId === q.id ? "복사 완료!" : "AI에게 할 질문 복사하기"}
+                      </button>
                     </div>
                   </div>
                 )}

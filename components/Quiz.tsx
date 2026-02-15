@@ -90,7 +90,8 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       }
     }
 
-    const text = `${currentQ.question}은 이건데, 답이 ${answerText} 이거야. 왜그런지 설명해줘.`;
+    const allOptionsText = currentQ.options.join('\n');
+    const text = `${currentQ.question} 에 대한 답은 ${answerText} 이고,\n선택지는\n${allOptionsText}\n 이 있어 설명을 좀해줘.\n시험 대비 팁도 알려줘.`;
 
     try {
       await navigator.clipboard.writeText(text);
