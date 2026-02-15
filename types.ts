@@ -6,6 +6,9 @@ export interface Question {
   explanation: string;
   sourceVersion?: string; // To track which JSON it came from
   id: string; // Unique identifier
+  originalQuestion?: string;
+  originalOptions?: string[];
+  originalExplanation?: string;
 }
 
 export interface QuizConfig {

@@ -127,13 +127,25 @@ export const formatTime = (seconds: number): string => {
 };
 
 // Helper to assign IDs and source to raw data
-export const processRawQuestions = (rawData: any[], versionName: string): Question[] => {
-  return rawData.map((q, idx) => ({
-    ...q,
-    // Keep real newlines and support literal \n strings if they exist
-    question: q.question ? q.question.replace(/\\n/g, '\n') : '',
-    explanation: q.explanation ? q.explanation.replace(/\\n/g, '\n') : '',
-    sourceVersion: versionName,
-    id: `${versionName}-${idx}-${Date.now()}`
-  }));
+export const processRawQuestions = (rawData: any[], versionName: string, originalData?: any[]): Question[] => {
+  return rawData.map((q, idx) => {
+    const processedQ: Question = {
+      ...q,
+      // Keep real newlines and support literal \n strings if they exist
+      question: q.question ? q.question.replace(/\\n/g, '\n') : '',
+      explanation: q.explanation ? q.explanation.replace(/\\n/g, '\n') : '',
+      sourceVersion: versionName,
+      id: `${versionName}-${idx}-${Date.now()}`
+    };
+
+    // If original data is provided, link the matching question (by index)
+    if (originalData && originalData[idx]) {
+      const orig = originalData[idx];
+      processedQ.originalQuestion = orig.question ? orig.question.replace(/\\n/g, '\n') : '';
+      processedQ.originalOptions = orig.options || [];
+      processedQ.originalExplanation = orig.explanation ? orig.explanation.replace(/\\n/g, '\n') : '';
+    }
+
+    return processedQ;
+  });
 };

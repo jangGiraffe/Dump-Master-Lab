@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Question } from '../types';
 import { formatTime } from '../utils';
-import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy } from 'lucide-react';
+import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages } from 'lucide-react';
 import { QuizTutorial } from './QuizTutorial';
 
 interface QuizProps {
@@ -18,6 +18,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const [showExplanation, setShowExplanation] = useState(false);
   const [showTutorial, setShowTutorial] = useState(true);
   const [showToast, setShowToast] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
 
   // Use ref to track if quiz is finished to prevent multiple submissions
   const isFinishedRef = useRef(false);
@@ -138,6 +139,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     if (currentIdx < questions.length - 1) {
       setCurrentIdx(prev => prev + 1);
       setShowExplanation(false);
+      setShowOriginal(false);
     } else {
       handleFinish();
     }
@@ -147,6 +149,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     if (currentIdx > 0) {
       setCurrentIdx(prev => prev - 1);
       setShowExplanation(false);
+      setShowOriginal(false);
     }
   }, [currentIdx]);
 
@@ -192,6 +195,11 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       // Copy Question (V)
       else if (key === 'V') {
         handleCopyQuestion();
+      }
+
+      // View Original (O or 0)
+      else if ((key === 'O' || key === '0') && currentQ.originalQuestion) {
+        setShowOriginal(prev => !prev);
       }
 
       // Answer Selection (1-4)
@@ -256,7 +264,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
           </div>
 
           <h2 className="text-lg md:text-xl font-medium text-gray-900 mb-6 leading-relaxed whitespace-pre-wrap">
-            {currentQ.question}
+            {showOriginal && currentQ.originalQuestion ? currentQ.originalQuestion : currentQ.question}
             {currentQ.answer.length > 1 && (
               <span className="ml-2 inline-block bg-blue-100 text-primary text-[10px] px-1.5 py-0.5 rounded align-middle font-bold border border-blue-200">
                 복수 선택 ({currentQ.answer.length}개)
@@ -299,7 +307,12 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                     `}>
                       {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
                     </div>
-                    <span className="text-sm md:text-base text-gray-700 leading-snug">{opt}</span>
+                    <span className="text-sm md:text-base text-gray-700 leading-snug">
+                      {(showOriginal && currentQ.originalOptions && currentQ.originalOptions[idx])
+                        ? currentQ.originalOptions[idx]
+                        : opt
+                      }
+                    </span>
                   </div>
                 );
               })}
@@ -308,7 +321,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
           {/* Explanation & Copy Actions */}
           <div className="border-t pt-4">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center flex-wrap gap-y-3 gap-x-4 mb-4">
               <button
                 onClick={() => setShowExplanation(!showExplanation)}
                 className="flex items-center text-primary font-medium hover:text-blue-700 transition-colors text-sm md:text-base group"
@@ -319,6 +332,19 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                   S
                 </span>
               </button>
+
+              {currentQ.originalQuestion && (
+                <button
+                  onClick={() => setShowOriginal(!showOriginal)}
+                  className={`flex items-center font-medium transition-colors text-sm md:text-base group ${showOriginal ? 'text-purple-600' : 'text-gray-500 hover:text-purple-600'}`}
+                >
+                  <Languages className="w-5 h-5 mr-2" />
+                  <span>{showOriginal ? "한국어 보기" : "원문 보기"}</span>
+                  <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono inline-block group-hover:bg-gray-200">
+                    O, 0
+                  </span>
+                </button>
+              )}
 
               <button
                 onClick={handleCopyQuestion}

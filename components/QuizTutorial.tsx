@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Keyboard, MousePointer2, Play, AlertCircle, Copy } from 'lucide-react';
+import { Keyboard, MousePointer2, Play, AlertCircle, Copy, Languages } from 'lucide-react';
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
@@ -98,6 +98,17 @@ export const QuizTutorial: React.FC<QuizTutorialProps> = ({ onStart }) => {
                 </span>
                 <div className="flex items-center">
                   <Kbd>V</Kbd>
+                </div>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600 flex items-center">
+                  <Languages className="w-3 h-3 mr-1" />
+                  원문 보기
+                </span>
+                <div className="flex items-center">
+                  <Kbd>O</Kbd>
+                  <Or />
+                  <Kbd>0</Kbd>
                 </div>
               </div>
             </div>

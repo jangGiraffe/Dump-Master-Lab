@@ -164,7 +164,18 @@ const App: React.FC = () => {
     // 2. Process raw data into Question objects with IDs
     let allQuestions: Question[] = [];
     selectedData.forEach(ds => {
-      const processed = processRawQuestions(ds.data, ds.name);
+      let originalData: any[] | undefined = undefined;
+
+      // Check if it's a Korean dataset and look for its English counterpart
+      if (ds.url && ds.url.endsWith('_KR.json')) {
+        const originalUrl = ds.url.replace('_KR.json', '.json');
+        const originalDataset = datasets.find(d => d.url === originalUrl);
+        if (originalDataset) {
+          originalData = originalDataset.data;
+        }
+      }
+
+      const processed = processRawQuestions(ds.data, ds.name, originalData);
       allQuestions = [...allQuestions, ...processed];
     });
 
