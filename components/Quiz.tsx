@@ -189,8 +189,8 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
         setShowExplanation(prev => !prev);
       }
 
-      // Copy Question (C)
-      else if (key === 'C') {
+      // Copy Question (V)
+      else if (key === 'V') {
         handleCopyQuestion();
       }
 
@@ -328,7 +328,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                 <Copy className="w-4 h-4 mr-2" />
                 <span>AI 질문 복사</span>
                 <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono inline-block group-hover:bg-gray-200">
-                  C
+                  V
                 </span>
               </button>
             </div>

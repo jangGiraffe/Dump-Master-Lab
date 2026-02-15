@@ -38,10 +38,10 @@ export const QuizTutorial: React.FC<QuizTutorialProps> = ({ onStart }) => {
           <h2 className="text-2xl font-bold">시험 조작 가이드</h2>
           <p className="text-blue-100 mt-2">키보드를 사용하여 더 빠르고 효율적으로 문제를 풀어보세요.</p>
         </div>
-        
+
         <div className="p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
+
             {/* Navigation Controls */}
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-800 flex items-center border-b pb-2">
@@ -97,7 +97,7 @@ export const QuizTutorial: React.FC<QuizTutorialProps> = ({ onStart }) => {
                   AI 질문 복사
                 </span>
                 <div className="flex items-center">
-                  <Kbd>C</Kbd>
+                  <Kbd>V</Kbd>
                 </div>
               </div>
             </div>
