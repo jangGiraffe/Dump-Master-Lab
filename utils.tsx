@@ -130,9 +130,9 @@ export const formatTime = (seconds: number): string => {
 export const processRawQuestions = (rawData: any[], versionName: string): Question[] => {
   return rawData.map((q, idx) => ({
     ...q,
-    // Replace newlines with spaces to improve readability
-    question: q.question ? q.question.replace(/\n/g, ' ') : '',
-    explanation: q.explanation ? q.explanation.replace(/\n/g, ' ') : '',
+    // Keep real newlines and support literal \n strings if they exist
+    question: q.question ? q.question.replace(/\\n/g, '\n') : '',
+    explanation: q.explanation ? q.explanation.replace(/\\n/g, '\n') : '',
     sourceVersion: versionName,
     id: `${versionName}-${idx}-${Date.now()}`
   }));
