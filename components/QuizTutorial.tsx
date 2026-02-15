@@ -66,6 +66,10 @@ export const QuizTutorial: React.FC<QuizTutorialProps> = ({ onStart }) => {
                   <Kbd>Space</Kbd>
                 </div>
               </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">휠 / 터치 스와이프 이동</span>
+                <span className="text-gray-400 text-[10px]">위 / 아래</span>
+              </div>
             </div>
 
             {/* Answer Selection & Actions */}
@@ -119,7 +123,7 @@ export const QuizTutorial: React.FC<QuizTutorialProps> = ({ onStart }) => {
           <div className="mt-8 bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
             <p className="flex items-start">
               <span className="mr-2">💡</span>
-              <span>마지막 문제에서 <b>다음(D, Space)</b> 키를 누르면 시험이 제출됩니다.</span>
+              <span>마지막 문제에서 <b>다음(D, Space)</b> 키를 누르면 시험이 제출됩니다. (마우스 휠/터치 스와이프 이동으로는 제출되지 않습니다.)</span>
             </p>
           </div>
 

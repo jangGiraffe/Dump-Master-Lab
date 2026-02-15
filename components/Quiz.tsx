@@ -24,6 +24,10 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const isFinishedRef = useRef(false);
   // Ref for explanation section to scroll into view
   const explanationRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const lastWheelTime = useRef(0);
+  const touchStartRef = useRef<number | null>(null);
+  const [animationKey, setAnimationKey] = useState(0);
 
   // Extract option letter (A, B, C, D)
   const getOptionLabel = useCallback((opt: string) => opt.split('.')[0].trim(), []);
@@ -141,6 +145,9 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       setCurrentIdx(prev => prev + 1);
       setShowExplanation(false);
       setShowOriginal(false);
+      setAnimationKey(prev => prev + 1);
+      // Reset scroll position
+      if (mainRef.current) mainRef.current.scrollTop = 0;
     } else {
       handleFinish();
     }
@@ -151,6 +158,9 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       setCurrentIdx(prev => prev - 1);
       setShowExplanation(false);
       setShowOriginal(false);
+      setAnimationKey(prev => prev + 1);
+      // Reset scroll position
+      if (mainRef.current) mainRef.current.scrollTop = 0;
     }
   }, [currentIdx]);
 
@@ -217,6 +227,82 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showTutorial, currentIdx, questions, handleNext, handlePrev, handleSelectOption, getOptionLabel, handleCopyQuestion]);
 
+  // Wheel Scroll Navigation
+  useEffect(() => {
+    if (showTutorial) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      const now = Date.now();
+      if (now - lastWheelTime.current < 600) return; // Throttle to prevent rapid skipping
+
+      const container = mainRef.current;
+      if (!container) return;
+
+      const isAtTop = container.scrollTop <= 0;
+      const isAtBottom = Math.abs(container.scrollHeight - container.clientHeight - container.scrollTop) < 2;
+
+      if (e.deltaY > 30) { // Scroll Down
+        if (isAtBottom && currentIdx < questions.length - 1) {
+          handleNext();
+          lastWheelTime.current = now;
+        }
+      } else if (e.deltaY < -30) { // Scroll Up
+        if (isAtTop && currentIdx > 0) {
+          handlePrev();
+          lastWheelTime.current = now;
+        }
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [showTutorial, currentIdx, questions.length, handleNext, handlePrev]);
+
+  // Touch Swipe Navigation
+  useEffect(() => {
+    if (showTutorial) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartRef.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartRef.current === null) return;
+
+      const touchEnd = e.changedTouches[0].clientY;
+      const diff = touchStartRef.current - touchEnd;
+      const threshold = 50; // Minimum swipe distance
+
+      const container = mainRef.current;
+      if (!container) return;
+
+      const isAtTop = container.scrollTop <= 0;
+      const isAtBottom = Math.abs(container.scrollHeight - container.clientHeight - container.scrollTop) < 2;
+
+      if (Math.abs(diff) > threshold) {
+        if (diff > 0) { // Swiped Up -> Next
+          if (isAtBottom && currentIdx < questions.length - 1) {
+            handleNext();
+          }
+        } else { // Swiped Down -> Prev
+          if (isAtTop && currentIdx > 0) {
+            handlePrev();
+          }
+        }
+      }
+
+      touchStartRef.current = null;
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [showTutorial, currentIdx, questions.length, handleNext, handlePrev]);
+
   const currentQ = questions[currentIdx];
   const selectedAnswer = answers[currentQ.id];
   const isErrorQuestion = !currentQ.options || currentQ.options.length === 0;
@@ -255,8 +341,15 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow min-h-0 p-4 md:p-6 max-w-4xl mx-auto w-full outline-none overflow-y-auto" tabIndex={0}>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
+      <main
+        ref={mainRef}
+        className="flex-grow min-h-0 p-4 md:p-6 max-w-4xl mx-auto w-full outline-none overflow-y-auto"
+        tabIndex={0}
+      >
+        <div
+          key={animationKey}
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 animate-slideIn"
+        >
 
           <div className="flex justify-between items-start mb-4">
             <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded font-medium mb-2">
