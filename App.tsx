@@ -22,6 +22,7 @@ const App: React.FC = () => {
   const [config, setConfig] = useState<QuizConfig | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>('');
+  const [isRetry, setIsRetry] = useState(false);
 
   const loadData = async (tier: UserTier, password?: string) => {
     setStage(AppStage.LOADING);
@@ -153,6 +154,7 @@ const App: React.FC = () => {
     // Reset quiz state if coming back from result/quiz
     setUserAnswers({});
     setQuizQuestions([]);
+    setIsRetry(false);
   };
 
   const handleStartQuiz = (newConfig: QuizConfig) => {
@@ -186,6 +188,7 @@ const App: React.FC = () => {
 
     setQuizQuestions(finalQuestions);
     setUserAnswers({});
+    setIsRetry(false);
     setStage(AppStage.QUIZ);
   };
 
@@ -205,7 +208,8 @@ const App: React.FC = () => {
         score,
         isPass,
         timeTakenSeconds,
-        examNames: Array.from(new Set(quizQuestions.map(q => q.sourceVersion || 'Unknown')))
+        examNames: Array.from(new Set(quizQuestions.map(q => q.sourceVersion || 'Unknown'))),
+        isRetry
       });
     }
 
@@ -215,6 +219,7 @@ const App: React.FC = () => {
   const handleRetryWrong = (wrongQuestions: Question[]) => {
     setQuizQuestions(shuffleArray([...wrongQuestions]));
     setUserAnswers({});
+    setIsRetry(true);
     setStage(AppStage.QUIZ);
   };
 

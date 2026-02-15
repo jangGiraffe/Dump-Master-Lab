@@ -73,7 +73,12 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                 {record.isPass ? 'PASS' : 'FAIL'}
                                             </span>
-                                            <span className="text-xs text-gray-400 flex items-center">
+                                            {record.isRetry && (
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                                    재시험
+                                                </span>
+                                            )}
+                                            <span className="text-xs text-gray-400 flex items-center ml-1">
                                                 <Calendar className="w-3 h-3 mr-1" />
                                                 {formatDate(record.timestamp)}
                                             </span>

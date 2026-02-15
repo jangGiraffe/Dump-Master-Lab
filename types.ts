@@ -46,6 +46,7 @@ export interface HistoryRecord {
   timeTakenSeconds: number;
   isPass: boolean;
   examNames: string[]; // Versions used
+  isRetry?: boolean;
 }
 
 
