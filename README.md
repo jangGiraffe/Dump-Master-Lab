@@ -38,6 +38,10 @@
 | :---: | :---: |
 | <img src="img/md/setting1.png" width="400"/> | <img src="img/md/setting2.png" width="400"/> |
 
+| 나의 기록 화면 |
+| :---: |
+| <img src="img/md/history1.png" width="400"/> |
+
 
 ## 🛠️ 초기 설정 (Configuration)
 
