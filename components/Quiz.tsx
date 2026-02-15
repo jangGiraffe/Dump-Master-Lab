@@ -202,8 +202,8 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
         setShowOriginal(prev => !prev);
       }
 
-      // Answer Selection (1-4)
-      else if (['1', '2', '3', '4'].includes(e.key)) {
+      // Answer Selection (1-6)
+      else if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {
         const index = parseInt(e.key) - 1;
         if (currentQ.options && currentQ.options[index]) {
           const label = getOptionLabel(currentQ.options[index]);

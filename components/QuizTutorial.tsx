@@ -75,12 +75,14 @@ export const QuizTutorial: React.FC<QuizTutorialProps> = ({ onStart }) => {
                 답안 및 기능
               </h3>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">보기 선택 (1~4)</span>
+                <span className="text-gray-600">보기 선택 (1~6)</span>
                 <div className="flex gap-1">
                   <Kbd>1</Kbd>
                   <Kbd>2</Kbd>
                   <Kbd>3</Kbd>
                   <Kbd>4</Kbd>
+                  <Kbd>5</Kbd>
+                  <Kbd>6</Kbd>
                 </div>
               </div>
               <div className="flex justify-between items-center text-sm">
