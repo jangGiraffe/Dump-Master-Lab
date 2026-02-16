@@ -9,7 +9,7 @@ import { Result } from './components/Result';
 import { History } from './components/History';
 import { dataSources } from './services/dataService';
 import { historyService } from './services/historyService';
-import { shuffleArray, processRawQuestions } from './utils';
+import { shuffleArray, processRawQuestions, authenticateUser } from './utils';
 import { Loader2, AlertCircle } from 'lucide-react';
 // Import crypto-js for decryption
 import CryptoJS from 'crypto-js';
@@ -28,12 +28,14 @@ const App: React.FC = () => {
 
   // Restore session on mount
   React.useEffect(() => {
-    const savedSession = localStorage.getItem(SESSION_KEY);
-    if (savedSession) {
+    const restoreSession = async () => {
+      const savedSession = localStorage.getItem(SESSION_KEY);
+      if (!savedSession) return;
+
       try {
         const { tier, password, timestamp } = JSON.parse(savedSession);
 
-        // Check if session is expired (12 hours)
+        // 1. Check if session is expired (12 hours)
         const TWELVE_HOURS = 12 * 60 * 60 * 1000;
         const isExpired = !timestamp || (Date.now() - timestamp > TWELVE_HOURS);
 
@@ -43,12 +45,28 @@ const App: React.FC = () => {
           return;
         }
 
+        // 2. Security Validation: Re-authenticate to prevent localStorage manipulation
+        if (tier === 'N' || tier === 'V') {
+          if (!password) throw new Error("Missing password for protected tier");
+          const verifiedTier = await authenticateUser(password);
+          if (verifiedTier !== tier) {
+            console.error("Session tier mismatch or invalid password. Potential manipulation detected.");
+            localStorage.removeItem(SESSION_KEY);
+            setStage(AppStage.LOGIN);
+            return;
+          }
+        }
+
+        // 3. If everything is fine, log in
         handleLogin(tier, password);
       } catch (e) {
-        console.error("Failed to restore session", e);
+        console.error("Failed to restore session or validation failed", e);
         localStorage.removeItem(SESSION_KEY);
+        setStage(AppStage.LOGIN);
       }
-    }
+    };
+
+    restoreSession();
   }, []);
 
   const loadData = async (tier: UserTier, password?: string) => {
