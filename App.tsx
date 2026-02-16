@@ -10,6 +10,7 @@ import { History } from './components/History';
 import { dataSources } from './services/dataService';
 import { historyService } from './services/historyService';
 import { shuffleArray, processRawQuestions, authenticateUser } from './utils';
+import { APP_CONFIG } from './config';
 import { Loader2, AlertCircle } from 'lucide-react';
 // Import crypto-js for decryption
 import CryptoJS from 'crypto-js';
@@ -25,6 +26,8 @@ const App: React.FC = () => {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>('');
   const [isRetry, setIsRetry] = useState(false);
+  const [isBossRaid, setIsBossRaid] = useState(false);
+  const [bossRaidWrongIds, setBossRaidWrongIds] = useState<string[]>([]);
 
   // Restore session on mount
   React.useEffect(() => {
@@ -103,7 +106,9 @@ const App: React.FC = () => {
           }
 
           if (source.url) {
-            const response = await fetch(source.url);
+            // Append version as query param to bust browser cache
+            const cacheBustUrl = `${source.url}?v=${APP_CONFIG.VERSION}`;
+            const response = await fetch(cacheBustUrl);
             if (!response.ok) {
               throw new Error(`Failed to load ${source.name}`);
             }
@@ -194,13 +199,24 @@ const App: React.FC = () => {
 
   const handleMenuSelect = (mode: 'quiz' | 'study' | 'history' | 'boss-raid') => {
     if (mode === 'quiz') {
+      setIsBossRaid(false);
       setStage(AppStage.SETUP);
     } else if (mode === 'study') {
       setStage(AppStage.STUDY);
     } else if (mode === 'history') {
       setStage(AppStage.HISTORY);
     } else if (mode === 'boss-raid') {
-      handleStartBossRaid();
+      const records = historyService.getRecords();
+      const allWrongIds = Array.from(new Set(records.flatMap(r => r.wrongQuestionIds || [])));
+
+      if (allWrongIds.length === 0) {
+        alert("정복할 보스가 없습니다! (아직 틀린 문제가 없습니다. 먼저 모의고사를 풀어보세요.)");
+        return;
+      }
+
+      setBossRaidWrongIds(allWrongIds);
+      setIsBossRaid(true);
+      setStage(AppStage.SETUP);
     }
   };
 
@@ -268,7 +284,7 @@ const App: React.FC = () => {
     const selectedData = datasets.filter(ds => newConfig.selectedVersions.includes(ds.id));
 
     // 2. Process raw data into Question objects with IDs
-    let allQuestions: Question[] = [];
+    let allQuestionsPool: Question[] = [];
     selectedData.forEach(ds => {
       let originalData: any[] | undefined = undefined;
 
@@ -282,17 +298,22 @@ const App: React.FC = () => {
       }
 
       const processed = processRawQuestions(ds.data, ds.id, originalData);
-      allQuestions = [...allQuestions, ...processed];
+      allQuestionsPool = [...allQuestionsPool, ...processed];
     });
 
-    // 3. Shuffle and slice
-    const shuffled = shuffleArray(allQuestions);
+    // 3. Filter if Boss Raid, then Shuffle and slice
+    let finalPool = allQuestionsPool;
+    if (isBossRaid) {
+      finalPool = allQuestionsPool.filter(q => bossRaidWrongIds.includes(q.id));
+    }
+
+    const shuffled = shuffleArray(finalPool);
     // Limit to configured count, but don't exceed available questions
     const finalQuestions = shuffled.slice(0, Math.min(newConfig.questionCount, shuffled.length));
 
     setQuizQuestions(finalQuestions);
     setUserAnswers({});
-    setIsRetry(false);
+    setIsRetry(isBossRaid);
     setStage(AppStage.QUIZ);
   };
 
@@ -356,7 +377,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`text-gray-900 font-sans bg-gray-50 ${stage === AppStage.QUIZ || stage === AppStage.STUDY
-      ? 'h-screen overflow-hidden flex flex-col'
+      ? 'h-[100dvh] overflow-hidden flex flex-col'
       : 'min-h-screen flex flex-col'
       }`}>
       <main className={`flex-grow flex flex-col w-full ${stage === AppStage.QUIZ || stage === AppStage.STUDY ? 'overflow-hidden' : ''}`}>
@@ -380,6 +401,8 @@ const App: React.FC = () => {
             onStart={handleStartQuiz}
             onBack={handleBackToMenu}
             userTier={userTier}
+            isBossRaid={isBossRaid}
+            wrongQuestionIds={bossRaidWrongIds}
           />
         )}
 
@@ -438,11 +461,16 @@ const App: React.FC = () => {
                   https://github.com/jangGiraffe/Dump-Master-Lab
                 </a>
               </div>
+              <div className="flex items-center space-x-2 text-gray-400 text-[11px] mt-2 pt-2 border-t border-gray-100">
+                <span>Version {APP_CONFIG.VERSION}</span>
+                <span>•</span>
+                <span>Last Updated: {APP_CONFIG.LAST_UPDATED}</span>
+              </div>
             </div>
           </footer>
         )
       }
-    </div >
+    </div>
   );
 };
 

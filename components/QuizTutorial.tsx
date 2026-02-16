@@ -32,14 +32,14 @@ export const QuizTutorial: React.FC<QuizTutorialProps> = ({ onStart }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden animate-fadeIn">
-        <div className="bg-primary p-6 text-white text-center">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90dvh] flex flex-col overflow-hidden animate-fadeIn">
+        <div className="bg-primary p-6 text-white text-center shrink-0">
           <Keyboard className="w-12 h-12 mx-auto mb-3 opacity-90" />
           <h2 className="text-2xl font-bold">시험 조작 가이드</h2>
-          <p className="text-blue-100 mt-2">키보드를 사용하여 더 빠르고 효율적으로 문제를 풀어보세요.</p>
+          <p className="text-blue-100 mt-2">키보드 또는 터치를 사용하여 문제를 풀어보세요.</p>
         </div>
 
-        <div className="p-8">
+        <div className="p-8 overflow-y-auto flex-grow">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
             {/* Navigation Controls */}
@@ -68,7 +68,7 @@ export const QuizTutorial: React.FC<QuizTutorialProps> = ({ onStart }) => {
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">휠 / 터치 스와이프 이동</span>
-                <span className="text-gray-400 text-[10px]">위 / 아래</span>
+                <span className="text-gray-400 text-[10px]">휠: 위/아래, 터치: 좌/우</span>
               </div>
             </div>
 

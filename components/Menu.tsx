@@ -1,10 +1,11 @@
 import React from 'react';
 import { BookOpen, PenTool, LogOut, BarChart2, Swords } from 'lucide-react';
 
+import { APP_CONFIG } from '../config';
 import { UserTier } from '../types';
 
 interface MenuProps {
-  onSelectMode: (mode: 'quiz' | 'study' | 'history') => void;
+  onSelectMode: (mode: 'quiz' | 'study' | 'history' | 'boss-raid') => void;
   onLogout: () => void;
   userTier: UserTier | null;
 }
@@ -14,9 +15,14 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
     <div className="flex-grow bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="max-w-4xl w-full">
         <div className="flex flex-col items-center mb-10">
-          <h1 className="text-2xl md:text-3xl font-semibold text-center text-gray-900">
-            Dump Master Lab
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-semibold text-center text-gray-900">
+              Dump Master Lab
+            </h1>
+            <span className="text-[10px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full border border-gray-200 font-bold self-center">
+              v{APP_CONFIG.VERSION}
+            </span>
+          </div>
           <p className="text-gray-500 text-center mt-2 text-sm md:text-base">
             계속하려면 모드를 선택하세요
           </p>

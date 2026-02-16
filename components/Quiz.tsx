@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Question } from '../types';
 import { formatTime } from '../utils';
-import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages } from 'lucide-react';
+import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown } from 'lucide-react';
 import { QuizTutorial } from './QuizTutorial';
 
 interface QuizProps {
@@ -27,7 +27,10 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const explanationRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const lastWheelTime = useRef(0);
-  const touchStartRef = useRef<number | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const [touchOffset, setTouchOffset] = useState(0);
+  const [vTouchOffset, setVTouchOffset] = useState(0);
   const [animationKey, setAnimationKey] = useState(0);
 
   // Extract option letter (A, B, C, D)
@@ -259,47 +262,100 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     return () => window.removeEventListener('wheel', handleWheel);
   }, [showTutorial, currentIdx, questions.length, handleNext, handlePrev]);
 
-  // Touch Swipe Navigation
+  // Touch Swipe Navigation (Horizontal)
   useEffect(() => {
     if (showTutorial) return;
 
     const handleTouchStart = (e: TouchEvent) => {
-      touchStartRef.current = e.touches[0].clientY;
+      touchStartXRef.current = e.touches[0].clientX;
+      touchStartYRef.current = e.touches[0].clientY;
+      setTouchOffset(0);
     };
 
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (touchStartRef.current === null) return;
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartXRef.current === null || touchStartYRef.current === null) return;
 
-      const touchEnd = e.changedTouches[0].clientY;
-      const diff = touchStartRef.current - touchEnd;
-      const threshold = 50; // Minimum swipe distance
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const diffX = touchStartXRef.current - currentX;
+      const diffY = touchStartYRef.current - currentY;
 
       const container = mainRef.current;
       if (!container) return;
-
       const isAtTop = container.scrollTop <= 0;
       const isAtBottom = Math.abs(container.scrollHeight - container.clientHeight - container.scrollTop) < 2;
 
-      if (Math.abs(diff) > threshold) {
-        if (diff > 0) { // Swiped Up -> Next
-          if (isAtBottom && currentIdx < questions.length - 1) {
+      // Vertical feedback at boundaries
+      if (Math.abs(diffY) > Math.abs(diffX)) {
+        if (isAtTop && diffY < 0) { // Pulling down at top
+          setVTouchOffset(-diffY * 0.5);
+        } else if (isAtBottom && diffY > 0) { // Pulling up at bottom
+          setVTouchOffset(-diffY * 0.5);
+        } else {
+          setVTouchOffset(0);
+        }
+      }
+
+      // If horizontal movement is dominant, update offset for visual feedback
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        // Apply resistance effect (logarithmic-like scaling)
+        const resistance = 0.8;
+        setTouchOffset(-diffX * resistance);
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffX = touchStartXRef.current - touchEndX;
+      const diffY = touchStartYRef.current - touchEndY;
+      const threshold = 100; // Threshold for intentional swipe
+
+      const container = mainRef.current;
+      if (!container) return;
+      const isAtTop = container.scrollTop <= 0;
+      const isAtBottom = Math.abs(container.scrollHeight - container.clientHeight - container.scrollTop) < 2;
+
+      // Handle horizontal swipes
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
+        if (diffX > 0) { // Swiped Left -> Next
+          if (currentIdx < questions.length - 1) {
             handleNext();
           }
-        } else { // Swiped Down -> Prev
-          if (isAtTop && currentIdx > 0) {
+        } else { // Swiped Right -> Prev
+          if (currentIdx > 0) {
+            handlePrev();
+          }
+        }
+      }
+      // Handle vertical swipes at boundaries
+      else if (Math.abs(diffY) > threshold) {
+        if (diffY > 0 && isAtBottom) { // Pulled up at bottom
+          if (currentIdx < questions.length - 1) {
+            handleNext();
+          }
+        } else if (diffY < 0 && isAtTop) { // Pulled down at top
+          if (currentIdx > 0) {
             handlePrev();
           }
         }
       }
 
-      touchStartRef.current = null;
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      setTouchOffset(0);
+      setVTouchOffset(0);
     };
 
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
       window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [showTutorial, currentIdx, questions.length, handleNext, handlePrev]);
@@ -315,7 +371,61 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       {showTutorial && <QuizTutorial onStart={() => setShowTutorial(false)} />}
 
       {/* Header */}
-      <header className="bg-white border-b px-4 py-3 sticky top-0 z-10 shadow-sm flex justify-between items-center">
+      <header className="bg-white border-b px-4 py-3 sticky top-0 z-10 shadow-sm flex justify-between items-center shrink-0">
+
+        {/* Swipe Feedback Overlay - Left (Previous) */}
+        {touchOffset > 10 && currentIdx > 0 && (
+          <div
+            className="fixed left-0 top-1/2 -translate-y-1/2 z-50 pointer-events-none flex items-center justify-start pl-4 h-32 w-24 rounded-r-full bg-gradient-to-r from-primary/20 to-transparent transition-opacity"
+            style={{ opacity: Math.min(touchOffset / 100, 0.8) }}
+          >
+            <ChevronLeft
+              className="text-primary w-12 h-12 transition-transform"
+              style={{ transform: `translateX(${Math.min(touchOffset / 3, 20)}px) scale(${0.8 + Math.min(touchOffset / 200, 0.5)})` }}
+            />
+          </div>
+        )}
+
+        {/* Swipe Feedback Overlay - Right (Next) */}
+        {touchOffset < -10 && currentIdx < questions.length - 1 && (
+          <div
+            className="fixed right-0 top-1/2 -translate-y-1/2 z-50 pointer-events-none flex items-center justify-end pr-4 h-32 w-24 rounded-l-full bg-gradient-to-l from-primary/20 to-transparent transition-opacity"
+            style={{ opacity: Math.min(Math.abs(touchOffset) / 100, 0.8) }}
+          >
+            <ChevronRight
+              className="text-primary w-12 h-12 transition-transform"
+              style={{ transform: `translateX(${-Math.min(Math.abs(touchOffset) / 3, 20)}px) scale(${0.8 + Math.min(Math.abs(touchOffset) / 200, 0.5)})` }}
+            />
+          </div>
+        )}
+
+        {/* Scroll Feedback Overlay - Top (Previous) */}
+        {vTouchOffset > 10 && currentIdx > 0 && (
+          <div
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center justify-start pt-4 w-48 h-24 rounded-b-full bg-gradient-to-b from-primary/20 to-transparent transition-opacity"
+            style={{ opacity: Math.min(vTouchOffset / 100, 0.8) }}
+          >
+            <ChevronUp
+              className="text-primary w-12 h-12 transition-transform"
+              style={{ transform: `translateY(${Math.min(vTouchOffset / 3, 20)}px) scale(${0.8 + Math.min(vTouchOffset / 200, 0.5)})` }}
+            />
+            <span className="text-[10px] text-primary font-bold mt-1 uppercase tracking-widest">Previous</span>
+          </div>
+        )}
+
+        {/* Scroll Feedback Overlay - Bottom (Next) */}
+        {vTouchOffset < -10 && currentIdx < questions.length - 1 && (
+          <div
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center justify-end pb-4 w-48 h-24 rounded-t-full bg-gradient-to-t from-primary/20 to-transparent transition-opacity"
+            style={{ opacity: Math.min(Math.abs(vTouchOffset) / 100, 0.8) }}
+          >
+            <span className="text-[10px] text-primary font-bold mb-1 uppercase tracking-widest">Next</span>
+            <ChevronDown
+              className="text-primary w-12 h-12 transition-transform"
+              style={{ transform: `translateY(${-Math.min(Math.abs(vTouchOffset) / 3, 20)}px) scale(${0.8 + Math.min(Math.abs(vTouchOffset) / 200, 0.5)})` }}
+            />
+          </div>
+        )}
         <div className="flex items-center space-x-4">
           <div className={`flex items-center font-mono font-medium text-lg ${timeLeft < 300 ? 'text-danger animate-pulse' : 'text-gray-700'}`}>
             <Clock className="w-5 h-5 mr-2" />
@@ -344,133 +454,135 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       {/* Main Content */}
       <main
         ref={mainRef}
-        className="flex-grow min-h-0 p-4 md:p-6 max-w-4xl mx-auto w-full outline-none overflow-y-auto"
+        className="flex-grow min-h-0 px-4 py-8 md:p-8 max-w-4xl mx-auto w-full outline-none overflow-y-auto"
         tabIndex={0}
       >
-        <div
-          key={animationKey}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 animate-slideIn"
-        >
+        <div className="pb-16 md:pb-20"> {/* Margin to ensure content isn't covered by footer */}
+          <div
+            key={animationKey}
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-10 animate-slideIn"
+          >
 
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex flex-wrap gap-2 mb-2">
-              <span className="inline-block bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                Source: {currentQ.sourceVersion}
-              </span>
-              {wrongCountMap[currentQ.id] > 0 && (
-                <span className="inline-block bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse flex items-center">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  누적 {wrongCountMap[currentQ.id]}회 오답
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex flex-wrap gap-2 mb-2">
+                <span className="inline-block bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                  Source: {currentQ.sourceVersion}
+                </span>
+                {wrongCountMap[currentQ.id] > 0 && (
+                  <span className="inline-block bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse flex items-center">
+                    <AlertTriangle className="w-3 h-3 mr-1" />
+                    누적 {wrongCountMap[currentQ.id]}회 오답
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <h2 className="text-lg md:text-xl font-medium text-gray-900 mb-6 leading-relaxed whitespace-pre-wrap">
+              {showOriginal && currentQ.originalQuestion ? currentQ.originalQuestion : currentQ.question}
+              {currentQ.answer.length > 1 && (
+                <span className="ml-2 inline-block bg-blue-100 text-primary text-[10px] px-1.5 py-0.5 rounded align-middle font-bold border border-blue-200">
+                  복수 선택 ({currentQ.answer.length}개)
                 </span>
               )}
-            </div>
-          </div>
+            </h2>
 
-          <h2 className="text-lg md:text-xl font-medium text-gray-900 mb-6 leading-relaxed whitespace-pre-wrap">
-            {showOriginal && currentQ.originalQuestion ? currentQ.originalQuestion : currentQ.question}
-            {currentQ.answer.length > 1 && (
-              <span className="ml-2 inline-block bg-blue-100 text-primary text-[10px] px-1.5 py-0.5 rounded align-middle font-bold border border-blue-200">
-                복수 선택 ({currentQ.answer.length}개)
-              </span>
-            )}
-          </h2>
+            <hr className="border-t border-gray-200 my-6" />
 
-          <hr className="border-t border-gray-200 my-6" />
+            {isErrorQuestion ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center mb-8">
+                <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-2" />
+                <h3 className="text-lg font-semibold text-red-700">오류 문제</h3>
+                <p className="text-red-600 mt-1">선택지 데이터가 없습니다. 자동으로 정답 처리됩니다.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 mb-8">
+                {currentQ.options.map((opt, idx) => {
+                  const label = getOptionLabel(opt);
+                  const isSelected = selectedAnswer ? selectedAnswer.includes(label) : false;
 
-          {isErrorQuestion ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center mb-8">
-              <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-2" />
-              <h3 className="text-lg font-semibold text-red-700">오류 문제</h3>
-              <p className="text-red-600 mt-1">선택지 데이터가 없습니다. 자동으로 정답 처리됩니다.</p>
-            </div>
-          ) : (
-            <div className="space-y-3 mb-8">
-              {currentQ.options.map((opt, idx) => {
-                const label = getOptionLabel(opt);
-                const isSelected = selectedAnswer ? selectedAnswer.includes(label) : false;
-
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => handleSelectOption(label)}
-                    className={`
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => handleSelectOption(label)}
+                      className={`
                       relative p-3 md:p-4 border rounded-lg cursor-pointer transition-all flex items-start group
                       ${isSelected ? 'border-primary bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}
                     `}
-                  >
-                    <div className="absolute right-3 top-3 hidden md:block opacity-0 group-hover:opacity-30 transition-opacity">
-                      <span className="text-xs border border-gray-400 rounded px-1.5 py-0.5 text-gray-500 font-mono">
-                        {idx + 1}
-                      </span>
-                    </div>
+                    >
+                      <div className="absolute right-3 top-3 hidden md:block opacity-0 group-hover:opacity-30 transition-opacity">
+                        <span className="text-xs border border-gray-400 rounded px-1.5 py-0.5 text-gray-500 font-mono">
+                          {idx + 1}
+                        </span>
+                      </div>
 
-                    <div className={`
+                      <div className={`
                       w-5 h-5 rounded-full border flex items-center justify-center mr-3 flex-shrink-0 mt-0.5
                       ${isSelected ? 'border-primary bg-primary text-white' : 'border-gray-300 text-gray-500'}
                     `}>
-                      {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                        {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                      </div>
+                      <span className="text-sm md:text-base text-gray-700 leading-snug">
+                        {(showOriginal && currentQ.originalOptions && currentQ.originalOptions[idx])
+                          ? currentQ.originalOptions[idx]
+                          : opt
+                        }
+                      </span>
                     </div>
-                    <span className="text-sm md:text-base text-gray-700 leading-snug">
-                      {(showOriginal && currentQ.originalOptions && currentQ.originalOptions[idx])
-                        ? currentQ.originalOptions[idx]
-                        : opt
-                      }
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Explanation & Copy Actions */}
-          <div className="border-t pt-4">
-            <div className="flex items-center flex-wrap gap-y-3 gap-x-4 mb-4">
-              <button
-                onClick={() => setShowExplanation(!showExplanation)}
-                className="flex items-center text-primary font-medium hover:text-blue-700 transition-colors text-sm md:text-base group"
-              >
-                <HelpCircle className="w-5 h-5 mr-2" />
-                <span>{showExplanation ? "해설 숨기기" : "해설 보기"}</span>
-                <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono inline-block group-hover:bg-gray-200">
-                  S
-                </span>
-              </button>
-
-              {currentQ.originalQuestion && (
-                <button
-                  onClick={() => setShowOriginal(!showOriginal)}
-                  className={`flex items-center font-medium transition-colors text-sm md:text-base group ${showOriginal ? 'text-purple-600' : 'text-gray-500 hover:text-purple-600'}`}
-                >
-                  <Languages className="w-5 h-5 mr-2" />
-                  <span>{showOriginal ? "한국어 보기" : "원문 보기"}</span>
-                  <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono inline-block group-hover:bg-gray-200">
-                    O, 0
-                  </span>
-                </button>
-              )}
-
-              <button
-                onClick={handleCopyQuestion}
-                className="flex items-center text-gray-500 hover:text-gray-900 transition-colors text-sm md:text-base group"
-                title="AI에게 질문하기 위해 문제와 답 복사"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                <span>AI 질문 복사</span>
-                <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono inline-block group-hover:bg-gray-200">
-                  V
-                </span>
-              </button>
-            </div>
-
-            {showExplanation && (
-              <div
-                ref={explanationRef}
-                className="p-4 bg-yellow-50 border border-warning/30 rounded-lg text-gray-800 animate-fadeIn text-sm scroll-mt-20"
-              >
-                <p className="font-semibold mb-1 text-warning/90">정답: {currentQ.answer}</p>
-                <div className="whitespace-pre-wrap">{currentQ.explanation}</div>
+                  );
+                })}
               </div>
             )}
+
+            {/* Explanation & Copy Actions */}
+            <div className="border-t pt-4">
+              <div className="flex items-center flex-wrap gap-y-3 gap-x-4 mb-4">
+                <button
+                  onClick={() => setShowExplanation(!showExplanation)}
+                  className="flex items-center text-primary font-medium hover:text-blue-700 transition-colors text-sm md:text-base group"
+                >
+                  <HelpCircle className="w-5 h-5 mr-2" />
+                  <span>{showExplanation ? "해설 숨기기" : "해설 보기"}</span>
+                  <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono inline-block group-hover:bg-gray-200">
+                    S
+                  </span>
+                </button>
+
+                {currentQ.originalQuestion && (
+                  <button
+                    onClick={() => setShowOriginal(!showOriginal)}
+                    className={`flex items-center font-medium transition-colors text-sm md:text-base group ${showOriginal ? 'text-purple-600' : 'text-gray-500 hover:text-purple-600'}`}
+                  >
+                    <Languages className="w-5 h-5 mr-2" />
+                    <span>{showOriginal ? "한국어 보기" : "원문 보기"}</span>
+                    <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono inline-block group-hover:bg-gray-200">
+                      O, 0
+                    </span>
+                  </button>
+                )}
+
+                <button
+                  onClick={handleCopyQuestion}
+                  className="flex items-center text-gray-500 hover:text-gray-900 transition-colors text-sm md:text-base group"
+                  title="AI에게 질문하기 위해 문제와 답 복사"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  <span>AI 질문 복사</span>
+                  <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono inline-block group-hover:bg-gray-200">
+                    V
+                  </span>
+                </button>
+              </div>
+
+              {showExplanation && (
+                <div
+                  ref={explanationRef}
+                  className="p-4 bg-yellow-50 border border-warning/30 rounded-lg text-gray-800 animate-fadeIn text-sm scroll-mt-20"
+                >
+                  <p className="font-semibold mb-1 text-warning/90">정답: {currentQ.answer}</p>
+                  <div className="whitespace-pre-wrap">{currentQ.explanation}</div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>
@@ -484,7 +596,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       )}
 
       {/* Footer Navigation */}
-      <footer className="bg-white border-t p-4 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      <footer className="bg-white border-t p-4 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] shrink-0">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <button
             onClick={handlePrev}

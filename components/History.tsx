@@ -237,22 +237,22 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
                                         </h3>
                                     </div>
 
-                                    <div className="flex items-center gap-4 md:gap-8 bg-gray-50 p-3 rounded-lg">
-                                        <div className="text-center">
+                                    <div className="flex items-center bg-gray-50 p-3 rounded-lg w-full md:w-auto md:gap-8">
+                                        <div className="flex-1 text-center">
                                             <p className="text-[10px] text-gray-400 uppercase font-bold">Score</p>
-                                            <p className={`text-lg font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
+                                            <p className={`text-base md:text-lg font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
                                                 {record.score}%
                                             </p>
                                         </div>
-                                        <div className="text-center border-x px-4 md:px-8 border-gray-200">
+                                        <div className="flex-1 text-center border-x border-gray-200 px-2 md:px-8">
                                             <p className="text-[10px] text-gray-400 uppercase font-bold">Accuracy</p>
-                                            <p className="text-lg font-bold text-gray-700">
+                                            <p className="text-base md:text-lg font-bold text-gray-700">
                                                 {record.correctCount}/{record.totalQuestions}
                                             </p>
                                         </div>
-                                        <div className="text-center">
+                                        <div className="flex-1 text-center">
                                             <p className="text-[10px] text-gray-400 uppercase font-bold">Time</p>
-                                            <p className="text-lg font-bold text-gray-700">
+                                            <p className="text-base md:text-lg font-bold text-gray-700 whitespace-nowrap">
                                                 {Math.floor(record.timeTakenSeconds / 60)}분 {record.timeTakenSeconds % 60}초
                                             </p>
                                         </div>

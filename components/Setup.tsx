@@ -1,16 +1,26 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dataset, QuizConfig, UserTier } from '../types';
-import { Settings, Play, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
+import { Settings, Play, ChevronLeft, ChevronRight, BookOpen, Info } from 'lucide-react';
+import { examService } from '../services/examService';
 
 interface SetupProps {
   datasets: Dataset[];
   onStart: (config: QuizConfig) => void;
   onBack: () => void;
   userTier: UserTier | null;
+  isBossRaid?: boolean;
+  wrongQuestionIds?: string[];
 }
 
-export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTier }) => {
+export const Setup: React.FC<SetupProps> = ({
+  datasets,
+  onStart,
+  onBack,
+  userTier,
+  isBossRaid = false,
+  wrongQuestionIds = []
+}) => {
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
   // Default to 65 questions
@@ -18,18 +28,60 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
   // Default to 120 minutes
   const [timeLimit, setTimeLimit] = useState<number>(120);
   const [maxQuestions, setMaxQuestions] = useState<number>(0);
+  const [isManualCount, setIsManualCount] = useState<boolean>(false);
 
-  // Derive available exams
+  // Derive available exams and enrich with ExamService
   const exams = useMemo(() => {
-    const uniqueCodes = Array.from(new Set(datasets.map(d => d.examCode || 'Uncategorized')));
-    return uniqueCodes.map(code => {
-      const d = datasets.find(ds => (ds.examCode || 'Uncategorized') === code);
-      return {
-        code,
-        name: d?.examName || code
-      };
+    const datasetCodes = new Set(datasets.map(d => d.examCode || 'Uncategorized'));
+    const allKnownExams = examService.getAllExams();
+
+    // Start with all known exams from ExamService
+    const list = allKnownExams.map(examInfo => ({
+      code: examInfo.code,
+      name: examInfo.name,
+      description: examInfo.description,
+      officialTime: examInfo.officialTimeLimitMinutes,
+      officialCount: examInfo.officialQuestionCount,
+      hasData: datasetCodes.has(examInfo.code)
+    }));
+
+    // Add any exams from datasets that aren't in ExamService
+    datasetCodes.forEach(code => {
+      const codeStr = code as string;
+      if (!list.find(e => e.code === codeStr)) {
+        list.push({
+          code: codeStr,
+          name: codeStr,
+          description: '해당 시험에 대한 정보가 없습니다.',
+          officialTime: undefined,
+          officialCount: undefined,
+          hasData: true
+        });
+      }
     });
-  }, [datasets]);
+
+    // If Boss Raid, further filter out exams that have NO wrong answers
+    if (isBossRaid && wrongQuestionIds.length > 0) {
+      return list.filter(exam => {
+        if (!exam.hasData) return false;
+        const examDatasets = datasets.filter(d => (d.examCode || 'Uncategorized') === exam.code);
+        // Check if any question in these datasets is in wrongQuestionIds
+        return examDatasets.some(ds => {
+          return ds.data.some((_, idx) => wrongQuestionIds.includes(`${ds.id}-${idx}`));
+        });
+      });
+    }
+
+    return list;
+  }, [datasets, isBossRaid, wrongQuestionIds]);
+
+  const handleExamClick = (exam: typeof exams[0]) => {
+    if (!exam.hasData) {
+      alert(`[${exam.code}] 시험은 현재 준비 중입니다.\n데이터가 업데이트되는 대로 이용 가능합니다.`);
+      return;
+    }
+    setSelectedExam(exam.code);
+  };
 
   // Filter datasets by selected exam
   const currentDatasets = useMemo(() => {
@@ -44,31 +96,51 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
       return;
     }
 
-    let total = currentDatasets
-      .filter(d => selectedVersions.includes(d.id))
-      .reduce((acc, curr) => acc + (curr.data?.length || 0), 0);
+    let total = 0;
+    const selectedDatasets = currentDatasets.filter(d => selectedVersions.includes(d.id));
 
-    // Cap total for non-VIP users
+    if (isBossRaid) {
+      // Only count questions that are in the wrongQuestionIds list
+      selectedDatasets.forEach(ds => {
+        ds.data.forEach((_, idx) => {
+          if (wrongQuestionIds.includes(`${ds.id}-${idx}`)) {
+            total++;
+          }
+        });
+      });
+    } else {
+      total = selectedDatasets.reduce((acc, curr) => acc + (curr.data?.length || 0), 0);
+    }
+
+    // Cap total for non-VIP users? 
+    // Usually Boss Raid is for VIP or special cases, but let's keep the 5-cap if needed
     if (userTier !== 'V' && total > 5) {
       total = 5;
     }
 
     setMaxQuestions(total);
 
+    // Get official info for the current exam
+    const examInfo = selectedExam ? examService.getExamByCode(selectedExam) : null;
+    const defaultCount = examInfo?.officialQuestionCount || 65;
+    const defaultTime = examInfo?.officialTimeLimitMinutes || 120;
+    const timePerQuestion = (examInfo?.officialTimeLimitMinutes && examInfo?.officialQuestionCount)
+      ? examInfo.officialTimeLimitMinutes / examInfo.officialQuestionCount
+      : 2;
+
     // Set initial count or adjust if it exceeds total
     if (userTier !== 'V') {
       // Standard users always capped at 5 (or less if total < 5)
-      setQuestionCount(Math.min(total, 5));
-      setTimeLimit(Math.min(total, 5) * 2);
+      const count = Math.min(total, 5);
+      setQuestionCount(count);
+      setTimeLimit(Math.round(count * timePerQuestion));
     } else {
-      // VIP users default to 65 or total if less
-      if (questionCount > total && total > 0) {
-        setQuestionCount(total);
-        setTimeLimit(total * 2);
-      } else if (total > 0 && questionCount === 0) {
-        // Initialize reasonable default for VIP
-        setQuestionCount(Math.min(65, total));
-        setTimeLimit(Math.min(65, total) * 2);
+      // VIP users: Initialize or adapt to total
+      if (total > 0) {
+        // If it's the first time selecting or total changed significantly
+        const newCount = Math.min(defaultCount, total);
+        setQuestionCount(newCount);
+        setTimeLimit(Math.round(newCount * timePerQuestion));
       }
     }
   }, [selectedVersions, currentDatasets, selectedExam, userTier]);
@@ -103,16 +175,21 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
     let val = parseInt(e.target.value) || 0;
 
     // Ensure we don't exceed max available
-    const effectiveMax = maxQuestions; // maxQuestions is already capped in useEffect
+    const effectiveMax = maxQuestions;
     if (effectiveMax > 0 && val > effectiveMax) {
       val = effectiveMax;
     }
 
     setQuestionCount(val);
 
-    // Automatically adjust time limit: ~2 minutes per question
+    // Automatically adjust time limit based on exam's ratio
+    const examInfo = selectedExam ? examService.getExamByCode(selectedExam) : null;
+    const timePerQuestion = (examInfo?.officialTimeLimitMinutes && examInfo?.officialQuestionCount)
+      ? examInfo.officialTimeLimitMinutes / examInfo.officialQuestionCount
+      : 2;
+
     if (val > 0) {
-      setTimeLimit(val * 2);
+      setTimeLimit(Math.round(val * timePerQuestion));
     }
   };
 
@@ -149,23 +226,32 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
               <ChevronLeft className="w-5 h-5" />
             </button>
             <Settings className="w-5 h-5 text-primary mr-2" />
-            <h2 className="text-xl font-semibold text-gray-800">시험 설정</h2>
+            <h2 className="text-xl font-semibold text-gray-800">
+              {isBossRaid ? '오답 보스전 설정' : '시험 설정'}
+            </h2>
           </div>
 
-          {/* User Tier Badge (small) */}
-          {userTier && (
-            <div className={`
-              px-3 py-1 rounded-full text-xs font-bold border
-              ${userTier === 'V'
-                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                : userTier === 'N'
-                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                  : 'bg-gray-100 text-gray-700 border-gray-300'
-              }
-            `}>
-              {userTier === 'V' ? '👑 VIP' : userTier === 'N' ? '😊 일반' : '👀 Guest'}
-            </div>
-          )}
+          {/* User Mode Badge */}
+          <div className="flex gap-2">
+            {isBossRaid && (
+              <div className="px-3 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
+                👹 BOSS RAID
+              </div>
+            )}
+            {userTier && (
+              <div className={`
+                px-3 py-1 rounded-full text-xs font-bold border
+                ${userTier === 'V'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : userTier === 'N'
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : 'bg-gray-100 text-gray-700 border-gray-300'
+                }
+              `}>
+                {userTier === 'V' ? '👑 VIP' : userTier === 'N' ? '😊 일반' : '👀 Guest'}
+              </div>
+            )}
+          </div>
         </div>
 
         {!selectedExam ? (
@@ -176,19 +262,44 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
               {exams.map(exam => (
                 <button
                   key={exam.code}
-                  onClick={() => setSelectedExam(exam.code)}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-left bg-white shadow-sm hover:shadow-md"
+                  onClick={() => handleExamClick(exam)}
+                  className={`flex items-center justify-between p-4 border rounded-lg transition-all text-left shadow-sm hover:shadow-md ${exam.hasData
+                    ? 'border-gray-200 hover:border-primary hover:bg-blue-50 bg-white'
+                    : 'border-gray-100 bg-gray-50 opacity-70 grayscale-[0.5]'
+                    }`}
                 >
                   <div className="flex items-center">
-                    <div className="bg-blue-100 p-2 rounded-lg mr-4">
-                      <BookOpen className="w-6 h-6 text-primary" />
+                    <div className={`${exam.hasData ? 'bg-blue-100' : 'bg-gray-200'} p-2 rounded-lg mr-4`}>
+                      <BookOpen className={`w-6 h-6 ${exam.hasData ? 'text-primary' : 'text-gray-400'}`} />
                     </div>
                     <div>
-                      <div className="font-bold text-gray-800">{exam.code}</div>
-                      <div className="text-sm text-gray-500">{exam.name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-bold text-gray-800">{exam.code}</div>
+                        {!exam.hasData && (
+                          <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold border border-amber-200">
+                            준비 중
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm font-medium text-gray-700">{exam.name}</div>
+                      <div className="text-xs text-gray-500 mt-1">{exam.description}</div>
+                      {(exam.officialCount || exam.officialTime) && (
+                        <div className="flex gap-2 mt-2">
+                          {exam.officialCount && (
+                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
+                              문항: {exam.officialCount}문항
+                            </span>
+                          )}
+                          {exam.officialTime && (
+                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
+                              시간: {exam.officialTime}분
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  {exam.hasData && <ChevronRight className="w-5 h-5 text-gray-400" />}
                 </button>
               ))}
             </div>
@@ -209,7 +320,9 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
 
             {/* Version Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">문제 은행 선택 (다중 선택 가능)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {isBossRaid ? '보스 문제 은행 선택' : '문제 은행 선택'} (다중 선택 가능)
+              </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[...currentDatasets]
                   .sort((a, b) => {
@@ -274,24 +387,95 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
                   문제 수
                   {maxQuestions > 0 && <span className="font-normal text-gray-500 ml-1">(최대: {effectiveMax})</span>}
                 </label>
-                <div className="relative group">
-                  <input
-                    type="number"
-                    min="1"
-                    max={effectiveMax > 0 ? effectiveMax : undefined}
-                    value={questionCount}
-                    onChange={handleQuestionCountChange}
-                    disabled={selectedVersions.length === 0}
-                    className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 text-sm"
-                  />
-                  {userTier !== 'V' && questionCount >= 5 && (
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                      ⚠️ 일반 회원은 한번에 최대 5문제까지만 풀 수 있습니다.
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-black/80"></div>
-                    </div>
-                  )}
+
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {[5, 10, 20].map(cnt => (
+                    <button
+                      key={cnt}
+                      type="button"
+                      onClick={() => {
+                        const examInfo = selectedExam ? examService.getExamByCode(selectedExam) : null;
+                        const timePerQuestion = (examInfo?.officialTimeLimitMinutes && examInfo?.officialQuestionCount)
+                          ? examInfo.officialTimeLimitMinutes / examInfo.officialQuestionCount
+                          : 2;
+                        const val = Math.min(cnt, effectiveMax);
+                        setQuestionCount(val);
+                        setTimeLimit(Math.round(val * timePerQuestion));
+                        setIsManualCount(false);
+                      }}
+                      className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${!isManualCount && questionCount === cnt
+                        ? 'bg-primary border-primary text-white shadow-sm'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                        } ${cnt > effectiveMax ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      disabled={cnt > effectiveMax && userTier === 'V'}
+                    >
+                      {cnt}개
+                    </button>
+                  ))}
+                  {/* Official Count Button */}
+                  {(() => {
+                    const examInfo = selectedExam ? examService.getExamByCode(selectedExam) : null;
+                    const offCnt = examInfo?.officialQuestionCount;
+                    if (offCnt && ![5, 10, 20].includes(offCnt)) {
+                      return (
+                        <button
+                          key="official"
+                          type="button"
+                          onClick={() => {
+                            const val = Math.min(offCnt, effectiveMax);
+                            setQuestionCount(val);
+                            const timePerQuestion = (examInfo?.officialTimeLimitMinutes && examInfo?.officialQuestionCount)
+                              ? examInfo.officialTimeLimitMinutes / examInfo.officialQuestionCount
+                              : 2;
+                            setTimeLimit(Math.round(val * timePerQuestion));
+                            setIsManualCount(false);
+                          }}
+                          className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${!isManualCount && questionCount === offCnt
+                            ? 'bg-primary border-primary text-white shadow-sm'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                            } ${offCnt > effectiveMax ? 'opacity-40 cursor-not-allowed' : ''}`}
+                          disabled={offCnt > effectiveMax && userTier === 'V'}
+                        >
+                          공식({offCnt}개)
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <button
+                    type="button"
+                    onClick={() => setIsManualCount(true)}
+                    className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${isManualCount
+                      ? 'bg-primary border-primary text-white shadow-sm'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                  >
+                    직접 입력
+                  </button>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">문제당 약 2분으로 시간이 자동 계산됩니다.</p>
+
+                {isManualCount && (
+                  <div className="relative group animate-fadeIn">
+                    <input
+                      type="number"
+                      min="1"
+                      max={effectiveMax > 0 ? effectiveMax : undefined}
+                      value={questionCount}
+                      onChange={handleQuestionCountChange}
+                      disabled={selectedVersions.length === 0}
+                      autoFocus
+                      className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 text-sm"
+                      placeholder="문제 수를 입력하세요"
+                    />
+                    {userTier !== 'V' && questionCount >= 5 && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        ⚠️ 일반 회원은 한번에 최대 5문제까지만 풀 수 있습니다.
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-black/80"></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-2">선택한 시험의 공식 시간 비율에 따라 제한 시간이 자동으로 계산됩니다.</p>
               </div>
 
               {/* Time Limit */}
@@ -314,11 +498,13 @@ export const Setup: React.FC<SetupProps> = ({ datasets, onStart, onBack, userTie
                 disabled={selectedVersions.length === 0 || questionCount < 1}
                 className={`w-full flex items-center justify-center py-2.5 px-4 rounded-lg font-semibold text-white transition-all text-sm ${selectedVersions.length === 0 || questionCount < 1
                   ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-primary hover:bg-blue-700 shadow-md hover:shadow-lg'
+                  : isBossRaid
+                    ? 'bg-red-600 hover:bg-red-700 shadow-md hover:shadow-lg'
+                    : 'bg-primary hover:bg-blue-700 shadow-md hover:shadow-lg'
                   }`}
               >
                 <Play className="w-4 h-4 mr-2" />
-                시험 시작
+                {isBossRaid ? '보스전 시작' : '시험 시작'}
               </button>
             </div>
           </div>
