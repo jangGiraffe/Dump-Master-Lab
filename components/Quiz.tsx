@@ -36,6 +36,11 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   // Extract option letter (A, B, C, D)
   const getOptionLabel = useCallback((opt: string) => opt.split('.')[0].trim(), []);
 
+  // Strip option letter for display (e.g. "A. Choice" -> "Choice")
+  const stripLabel = useCallback((opt: string) => {
+    return opt.replace(/^[A-Z]\.\s*/, '');
+  }, []);
+
   // Finish Handler
   const handleFinish = useCallback(() => {
     if (isFinishedRef.current) return;
@@ -88,17 +93,19 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       // Handle multiple answers (e.g. "AD") or single "A"
       const correctLabels = currentQ.answer.split('').map(s => s.trim());
 
-      const foundOptions = currentQ.options.filter(opt => {
-        const label = getOptionLabel(opt);
-        return correctLabels.includes(label);
-      });
+      const foundOptions = currentQ.options
+        .filter(opt => {
+          const label = getOptionLabel(opt);
+          return correctLabels.includes(label);
+        })
+        .map(opt => stripLabel(opt));
 
       if (foundOptions.length > 0) {
         answerText = foundOptions.join(', ');
       }
     }
 
-    const allOptionsText = currentQ.options.join('\n');
+    const allOptionsText = currentQ.options.map(opt => stripLabel(opt)).join('\n');
     const text = `${currentQ.question} 에 대한 답은 ${answerText} 이고,\n선택지는\n${allOptionsText}\n 이 있어 설명을 좀해줘.\n시험 대비 팁도 알려줘.`;
 
     try {
@@ -523,8 +530,8 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                       </div>
                       <span className="text-sm md:text-base text-gray-700 leading-snug">
                         {(showOriginal && currentQ.originalOptions && currentQ.originalOptions[idx])
-                          ? currentQ.originalOptions[idx]
-                          : opt
+                          ? stripLabel(currentQ.originalOptions[idx])
+                          : stripLabel(opt)
                         }
                       </span>
                     </div>
@@ -578,7 +585,15 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                   ref={explanationRef}
                   className="p-4 bg-yellow-50 border border-warning/30 rounded-lg text-gray-800 animate-fadeIn text-sm scroll-mt-20"
                 >
-                  <p className="font-semibold mb-1 text-warning/90">정답: {currentQ.answer}</p>
+                  <p className="font-semibold mb-1 text-warning/90">
+                    정답: {(() => {
+                      const correctLabels = currentQ.answer.split('').map(s => s.trim());
+                      const found = currentQ.options
+                        .filter(opt => correctLabels.includes(getOptionLabel(opt)))
+                        .map(opt => stripLabel(opt));
+                      return found.length > 0 ? found.join(', ') : currentQ.answer;
+                    })()}
+                  </p>
                   <div className="whitespace-pre-wrap">{currentQ.explanation}</div>
                 </div>
               )}

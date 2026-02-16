@@ -244,6 +244,7 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
 
                     <div className="space-y-2 mb-4">
                       {q.options.map((opt, i) => {
+                        const stripLabel = (text: string) => text.replace(/^[A-Z]\.\s*/, '');
                         const label = opt.split('.')[0].trim();
                         let optClass = "p-2 border rounded text-xs md:text-sm text-gray-600";
 
@@ -255,7 +256,7 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
 
                         return (
                           <div key={i} className={optClass}>
-                            {opt}
+                            {stripLabel(opt)}
                           </div>
                         );
                       })}
@@ -273,12 +274,14 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
                           const getFullText = (labels: string) => {
                             if (!q.options || q.options.length === 0) return labels;
                             const labelArr = labels.split('').map(s => s.trim());
-                            const matched = q.options.filter(opt => labelArr.includes(opt.split('.')[0].trim()));
+                            const matched = q.options
+                              .filter(opt => labelArr.includes(opt.split('.')[0].trim()))
+                              .map(opt => opt.replace(/^[A-Z]\.\s*/, ''));
                             return matched.length > 0 ? matched.join(', ') : labels;
                           };
                           const correctText = getFullText(q.answer);
                           const userText = userAnswer ? getFullText(userAnswer) : "선택하지 않음";
-                          const allOptionsText = q.options.join('\n');
+                          const allOptionsText = q.options.map(opt => opt.replace(/^[A-Z]\.\s*/, '')).join('\n');
                           const text = `${q.question} 에 대한 답은 ${correctText} 이고, 나는 ${userText}을 골랐어. 알려줘.\n다른 선택지는\n${allOptionsText}\n 이 있어.설명을 부탁해. \n시험 대비 팁도 알려줘.`;
 
                           navigator.clipboard.writeText(text).then(() => {

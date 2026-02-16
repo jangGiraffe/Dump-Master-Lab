@@ -269,7 +269,22 @@ const App: React.FC = () => {
       return;
     }
 
-    setQuizQuestions(shuffleArray(bossQuestions));
+    // Shuffle options for each question
+    const questionsWithShuffledOptions = bossQuestions.map(q => {
+      if (!q.options || q.options.length === 0) return q;
+      const zipped = q.options.map((opt, i) => ({
+        opt,
+        orig: q.originalOptions ? q.originalOptions[i] : undefined
+      }));
+      const shuffledZipped = shuffleArray(zipped);
+      return {
+        ...q,
+        options: shuffledZipped.map(z => z.opt),
+        originalOptions: q.originalOptions ? shuffledZipped.map(z => z.orig!) : undefined
+      };
+    });
+
+    setQuizQuestions(shuffleArray(questionsWithShuffledOptions));
     setUserAnswers({});
     setIsRetry(true); // Treat as retry for UI purposes
     setConfig({
@@ -322,7 +337,25 @@ const App: React.FC = () => {
     // Limit to configured count, but don't exceed available questions
     const finalQuestions = shuffled.slice(0, Math.min(newConfig.questionCount, shuffled.length));
 
-    setQuizQuestions(finalQuestions);
+    // Shuffle options for each question
+    const questionsWithShuffledOptions = finalQuestions.map(q => {
+      if (!q.options || q.options.length === 0) return q;
+
+      const zipped = q.options.map((opt, i) => ({
+        opt,
+        orig: q.originalOptions ? q.originalOptions[i] : undefined
+      }));
+
+      const shuffledZipped = shuffleArray(zipped);
+
+      return {
+        ...q,
+        options: shuffledZipped.map(z => z.opt),
+        originalOptions: q.originalOptions ? shuffledZipped.map(z => z.orig!) : undefined
+      };
+    });
+
+    setQuizQuestions(questionsWithShuffledOptions);
     setUserAnswers({});
     setIsRetry(isBossRaid);
     setStage(AppStage.QUIZ);
@@ -356,7 +389,22 @@ const App: React.FC = () => {
   };
 
   const handleRetryWrong = (wrongQuestions: Question[]) => {
-    setQuizQuestions(shuffleArray([...wrongQuestions]));
+    // Reshuffle options for each question for the retry session
+    const questionsWithReshuffledOptions = wrongQuestions.map(q => {
+      if (!q.options || q.options.length === 0) return q;
+      const zipped = q.options.map((opt, i) => ({
+        opt,
+        orig: q.originalOptions ? q.originalOptions[i] : undefined
+      }));
+      const shuffledZipped = shuffleArray(zipped);
+      return {
+        ...q,
+        options: shuffledZipped.map(z => z.opt),
+        originalOptions: q.originalOptions ? shuffledZipped.map(z => z.orig!) : undefined
+      };
+    });
+
+    setQuizQuestions(shuffleArray(questionsWithReshuffledOptions));
     setUserAnswers({});
     setIsRetry(true);
     setStage(AppStage.QUIZ);
