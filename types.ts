@@ -34,7 +34,8 @@ export enum AppStage {
   STUDY = 'STUDY',
   QUIZ = 'QUIZ',
   RESULT = 'RESULT',
-  HISTORY = 'HISTORY'
+  HISTORY = 'HISTORY',
+  BOSS_RAID = 'BOSS_RAID'
 }
 
 export interface HistoryRecord {
@@ -47,6 +48,7 @@ export interface HistoryRecord {
   isPass: boolean;
   examNames: string[]; // Versions used
   isRetry?: boolean;
+  wrongQuestionIds?: string[]; // IDs of questions answered incorrectly
 }
 
 

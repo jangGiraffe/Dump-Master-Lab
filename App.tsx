@@ -10,9 +10,11 @@ import { History } from './components/History';
 import { dataSources } from './services/dataService';
 import { historyService } from './services/historyService';
 import { shuffleArray, processRawQuestions } from './utils';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 // Import crypto-js for decryption
 import CryptoJS from 'crypto-js';
+
+const SESSION_KEY = 'dump_master_session';
 
 const App: React.FC = () => {
   const [stage, setStage] = useState<AppStage>(AppStage.LOGIN);
@@ -23,6 +25,31 @@ const App: React.FC = () => {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>('');
   const [isRetry, setIsRetry] = useState(false);
+
+  // Restore session on mount
+  React.useEffect(() => {
+    const savedSession = localStorage.getItem(SESSION_KEY);
+    if (savedSession) {
+      try {
+        const { tier, password, timestamp } = JSON.parse(savedSession);
+
+        // Check if session is expired (12 hours)
+        const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+        const isExpired = !timestamp || (Date.now() - timestamp > TWELVE_HOURS);
+
+        if (isExpired) {
+          console.log("Session expired, logging out...");
+          localStorage.removeItem(SESSION_KEY);
+          return;
+        }
+
+        handleLogin(tier, password);
+      } catch (e) {
+        console.error("Failed to restore session", e);
+        localStorage.removeItem(SESSION_KEY);
+      }
+    }
+  }, []);
 
   const loadData = async (tier: UserTier, password?: string) => {
     setStage(AppStage.LOADING);
@@ -130,6 +157,12 @@ const App: React.FC = () => {
 
   const handleLogin = (tier: UserTier, inputPassword?: string) => {
     setUserTier(tier);
+    // Save session to localStorage with timestamp
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      tier,
+      password: inputPassword,
+      timestamp: Date.now()
+    }));
     // Pass password for decryption if available
     loadData(tier, inputPassword);
   };
@@ -137,16 +170,69 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setStage(AppStage.LOGIN);
     setDatasets([]);
+    // Clear session from localStorage
+    localStorage.removeItem(SESSION_KEY);
   };
 
-  const handleMenuSelect = (mode: 'quiz' | 'study' | 'history') => {
+  const handleMenuSelect = (mode: 'quiz' | 'study' | 'history' | 'boss-raid') => {
     if (mode === 'quiz') {
       setStage(AppStage.SETUP);
     } else if (mode === 'study') {
       setStage(AppStage.STUDY);
-    } else {
+    } else if (mode === 'history') {
       setStage(AppStage.HISTORY);
+    } else if (mode === 'boss-raid') {
+      handleStartBossRaid();
     }
+  };
+
+  const handleStartBossRaid = () => {
+    const records = historyService.getRecords();
+    const allWrongIds = Array.from(new Set(records.flatMap(r => r.wrongQuestionIds || [])));
+
+    if (allWrongIds.length === 0) {
+      alert("정복할 보스가 없습니다! (아직 틀린 문제가 없습니다. 먼저 모의고사를 풀어보세요.)");
+      return;
+    }
+
+    // 1. Process all datasets to get all possible questions
+    let allAvailableQuestions: Question[] = [];
+    datasets.forEach(ds => {
+      let originalData: any[] | undefined = undefined;
+      if (ds.url && ds.url.endsWith('_KR.json')) {
+        const originalUrl = ds.url.replace('_KR.json', '.json');
+        const originalDataset = datasets.find(d => d.url === originalUrl);
+        if (originalDataset) originalData = originalDataset.data;
+      }
+      const processed = processRawQuestions(ds.data, ds.id, originalData);
+      allAvailableQuestions = [...allAvailableQuestions, ...processed];
+    });
+
+    // 2. Filter by wrong IDs
+    // Note: The ID structure might be different if processRawQuestions uses Date.now()
+    // We should probably change how IDs are generated to be stable.
+    // Let's assume for now we match by question text or a more stable ID.
+    // Actually, let's fix processRawQuestions ID generation first to be stable.
+
+    // For now, let's try to match by ID
+    const bossQuestions = allAvailableQuestions.filter(q => allWrongIds.includes(q.id));
+
+    if (bossQuestions.length === 0) {
+      // Fallback: match by question text hash or content if ID is unstable due to Date.now()
+      // But for this session, we'll try to use stable IDs.
+      alert("데이터가 갱신되어 이전 오답 정보를 찾을 수 없습니다. 새로운 시험부터 기록됩니다.");
+      return;
+    }
+
+    setQuizQuestions(shuffleArray(bossQuestions));
+    setUserAnswers({});
+    setIsRetry(true); // Treat as retry for UI purposes
+    setConfig({
+      questionCount: bossQuestions.length,
+      timeLimitMinutes: Math.ceil(bossQuestions.length * 1.5), // 1.5 min per question
+      selectedVersions: Array.from(new Set(bossQuestions.map(q => q.sourceVersion || '')))
+    });
+    setStage(AppStage.QUIZ);
   };
 
   const handleBackToMenu = () => {
@@ -177,7 +263,7 @@ const App: React.FC = () => {
         }
       }
 
-      const processed = processRawQuestions(ds.data, ds.name, originalData);
+      const processed = processRawQuestions(ds.data, ds.id, originalData);
       allQuestions = [...allQuestions, ...processed];
     });
 
@@ -197,6 +283,7 @@ const App: React.FC = () => {
 
     if (config) {
       const wrongCount = quizQuestions.filter(q => answers[q.id] !== q.answer).length;
+      const wrongQuestions = quizQuestions.filter(q => answers[q.id] !== q.answer);
       const correctCount = quizQuestions.length - wrongCount;
       const score = Math.round((correctCount / quizQuestions.length) * 100);
       const isPass = score >= 72;
@@ -209,7 +296,8 @@ const App: React.FC = () => {
         isPass,
         timeTakenSeconds,
         examNames: Array.from(new Set(quizQuestions.map(q => q.sourceVersion || 'Unknown'))),
-        isRetry
+        isRetry,
+        wrongQuestionIds: wrongQuestions.map(q => q.id)
       });
     }
 
@@ -282,6 +370,16 @@ const App: React.FC = () => {
             questions={quizQuestions}
             timeLimitMinutes={config.timeLimitMinutes}
             onComplete={handleQuizComplete}
+            wrongCountMap={(() => {
+              const records = historyService.getRecords();
+              const map: Record<string, number> = {};
+              records.forEach(r => {
+                r.wrongQuestionIds?.forEach(id => {
+                  map[id] = (map[id] || 0) + 1;
+                });
+              });
+              return map;
+            })()}
           />
         )}
 

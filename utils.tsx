@@ -135,7 +135,7 @@ export const processRawQuestions = (rawData: any[], versionName: string, origina
       question: q.question ? q.question.replace(/\\n/g, '\n') : '',
       explanation: q.explanation ? q.explanation.replace(/\\n/g, '\n') : '',
       sourceVersion: versionName,
-      id: `${versionName}-${idx}-${Date.now()}`
+      id: `${versionName}-${idx}`
     };
 
     // If original data is provided, link the matching question (by index)

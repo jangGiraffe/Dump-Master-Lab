@@ -9,9 +9,10 @@ interface QuizProps {
   questions: Question[];
   timeLimitMinutes: number;
   onComplete: (userAnswers: Record<string, string>, timeLeft: number) => void;
+  wrongCountMap?: Record<string, number>;
 }
 
-export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onComplete }) => {
+export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onComplete, wrongCountMap = {} }) => {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(timeLimitMinutes * 60);
@@ -352,9 +353,17 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
         >
 
           <div className="flex justify-between items-start mb-4">
-            <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded font-medium mb-2">
-              출처: {currentQ.sourceVersion}
-            </span>
+            <div className="flex flex-wrap gap-2 mb-2">
+              <span className="inline-block bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                Source: {currentQ.sourceVersion}
+              </span>
+              {wrongCountMap[currentQ.id] > 0 && (
+                <span className="inline-block bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse flex items-center">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  누적 {wrongCountMap[currentQ.id]}회 오답
+                </span>
+              )}
+            </div>
           </div>
 
           <h2 className="text-lg md:text-xl font-medium text-gray-900 mb-6 leading-relaxed whitespace-pre-wrap">
