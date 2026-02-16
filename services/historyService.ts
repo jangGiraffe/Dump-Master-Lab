@@ -5,6 +5,9 @@ import { collection, addDoc, getDocs, query, where, orderBy, deleteDoc, doc, lim
 const STORAGE_KEY = 'dump_master_lab_history';
 const STORAGE_MODE = import.meta.env.VITE_STORAGE_MODE || 'LOCAL';
 
+// Track initial sync per user session to avoid redundant DB reads
+const syncedUsers = new Set<string>();
+
 export const historyService = {
     saveRecord: async (record: Omit<HistoryRecord, 'id' | 'timestamp'>, userId?: string): Promise<HistoryRecord> => {
         const timestamp = Date.now();
@@ -39,9 +42,14 @@ export const historyService = {
         return newRecord;
     },
 
-    getRecords: async (userId?: string): Promise<HistoryRecord[]> => {
+    getRecords: async (userId?: string, forceFetch: boolean = false): Promise<HistoryRecord[]> => {
         // If LOCAL mode, just return local results filtered by user immediately
         if (STORAGE_MODE === 'LOCAL' || !userId) {
+            return historyService.getLocalRecords(userId);
+        }
+
+        // Return local records if not forcing fetch and session already synced
+        if (!forceFetch && syncedUsers.has(userId)) {
             return historyService.getLocalRecords(userId);
         }
 
@@ -67,9 +75,18 @@ export const historyService = {
             const mergedRecords = [...records, ...allRecords].slice(0, 200);
 
             localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedRecords));
+
+            // Mark as synced for this session
+            syncedUsers.add(userId);
+
             return records;
-        } catch (e) {
+        } catch (e: any) {
             console.error("Error fetching documents from Firestore: ", e);
+            // If it's a missing index error, Firestore provides a link in the error message
+            if (e.message && e.message.includes('index')) {
+                console.error("FIREBASE INDEX ERROR: ", e.message);
+                // We won't alert here to avoid annoying popups, but the console will have the link.
+            }
             return historyService.getLocalRecords(userId);
         }
     },
@@ -113,8 +130,8 @@ export const historyService = {
         const localRecords = historyService.getLocalRecords();
         if (localRecords.length === 0) return 0;
 
-        // Fetch current cloud records to avoid duplicates
-        const cloudRecords = await historyService.getRecords(userId);
+        // Fetch current cloud records to avoid duplicates (Force fetch here)
+        const cloudRecords = await historyService.getRecords(userId, true);
         const cloudKeys = new Set(cloudRecords.map(r => `${r.timestamp}_${r.score}`));
 
         let syncCount = 0;

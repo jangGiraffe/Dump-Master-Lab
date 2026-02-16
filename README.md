@@ -48,17 +48,42 @@
 이 프로젝트는 `.env` 파일을 통해 보안 키를 안전하게 관리합니다.
 
 ### 1. 환경 변수 설정 (.env)
-프로젝트 루트에 `.env` 파일을 생성하고( `.env.sample` 참고), 아래와 같이 암호화 키를 설정하세요.
+프로젝트 루트에 `.env` 파일을 생성하고( `.env.sample` 참고), 아래 정보를 설정하세요.
 ```env
+# 데이터 복호화 키
 VITE_DATA_ENCRYPTION_KEY=your-secret-key-here
+
+# Firebase 설정 (Cloud 모드 사용 시 필수)
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_APP_ID=...
+
+# 저장 모드 설정: LOCAL (브라우저 저장) / CLOUD (서버 동기화)
+VITE_STORAGE_MODE=CLOUD
 ```
-* **주의**: 이 키는 `encrypt-dumps.js`(암호화)와 `App.tsx`(복호화) 양쪽에서 사용됩니다.
 
 ### 2. 로그인 비밀번호 설정
 `config.ts` 파일에서 로그인 검증을 위한 해시값을 설정합니다.
 1. `hash-generator.html` 파일을 브라우저로 엽니다.
-2. `.env`에 설정한 비밀번호(예: `your-secret-key-here`)를 입력하여 SHA-256 해시를 생성합니다.
-3. `config.ts`의 `VIP_PASSWORD_HASH` 값을 생성된 해시값으로 교체합니다.
+2. 비밀번호를 입력하여 SHA-256 해시를 생성합니다.
+3. `config.ts`의 `VIP_PASSWORD_HASH` 등의 값을 생성된 해시값으로 교체합니다.
+
+## ☁️ 데이터 동기화 및 관리 (Data Sync & Persistence)
+
+이 서비스는 사용자의 학습 기록을 관리하기 위해 두 가지 모드를 지원합니다.
+
+### 1. 저장 모드 (`VITE_STORAGE_MODE`)
+- **`LOCAL` 모드**: 모든 데이터가 브라우저의 `localStorage`에만 저장됩니다. 서버와의 통신이 발생하지 않아 보안성이 높고 오프라인에서 가볍게 작동합니다.
+- **`CLOUD` 모드**: Firebase Firestore와 연동되어 여러 기기에서 학습 이력을 동기화합니다. `localStorage`는 캐시 용도로 사용되어 빠른 로딩을 지원합니다.
+
+### 2. 사용자 ID 기반 동기화 (Multi-Device Sync)
+- 로그인 시 입력한 **사용자 ID**를 기준으로 데이터가 격리되어 저장됩니다.
+- 다른 기기나 브라우저에서도 동일한 사용자 ID와 비밀번호로 로그인하면 이전 학습 이력을 즉시 불러올 수 있습니다.
+
+### 3. 조회 최적화 로직
+- **초기 동기화**: 로그인 성공 시 1회만 DB에서 로컬로 최신 데이터를 가져옵니다.
+- **캐시 기반 조회**: '나의 기록' 페이지 진입 시 DB를 매번 읽지 않고 로컬 데이터를 즉시 표출하여 로딩 속도를 극대화했습니다.
+- **수동 동기화**: 로컬에만 쌓인 새로운 기록을 서버로 백업하고 싶을 때 '서버로 동기화' 버튼을 사용합니다. (이때만 DB를 강제로 재조회합니다.)
 
 ## 🔐 데이터 관리 및 암호화 (Data Workflow)
 

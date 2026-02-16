@@ -194,6 +194,11 @@ const App: React.FC = () => {
     }));
     // Pass password for decryption if available
     loadData(tier, inputPassword);
+
+    // Initial sync of history from DB to Local
+    historyService.getRecords(userId, true).catch(err => {
+      console.error("Failed to perform initial history sync:", err);
+    });
   };
 
   const handleLogout = () => {

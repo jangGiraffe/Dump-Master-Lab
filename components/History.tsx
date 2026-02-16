@@ -204,8 +204,33 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                     )}
                 </div>
 
-                {records.length > 0 && (
-                    <>
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-32 animate-fadeIn">
+                        <div className="relative w-16 h-16">
+                            <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+                            <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                        <p className="mt-6 text-gray-400 font-bold uppercase tracking-widest text-xs animate-pulse">
+                            데이터 동기화 중...
+                        </p>
+                    </div>
+                ) : records.length === 0 ? (
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-16 text-center animate-slideIn">
+                        <div className="inline-flex p-5 bg-gray-50 rounded-2xl mb-6">
+                            <BarChart2 className="w-12 h-12 text-gray-300" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">기록이 없습니다</h3>
+                        <p className="text-gray-500 mb-8 max-w-xs mx-auto">아직 응시한 시험 기록이 없습니다. 지금 바로 첫 시험에 도전해보세요!</p>
+                        <button
+                            onClick={onBack}
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md active:scale-95"
+                        >
+                            <BookOpen className="w-5 h-5" />
+                            시험 보러 가기
+                        </button>
+                    </div>
+                ) : (
+                    <div className="animate-fadeIn">
                         <ActivityHeatmap records={records} />
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -245,87 +270,70 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                 delay="animate-slideInStagger4"
                             />
                         </div>
-                    </>
-                )}
 
-                {isLoading ? (
-                    <div className="flex flex-col items-center justify-center py-20">
-                        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                        <p className="mt-4 text-gray-500 font-medium">기록을 불러오는 중...</p>
-                    </div>
-                ) : records.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-                        <BarChart2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500">아직 응시한 시험 기록이 없습니다.</p>
-                        <button
-                            onClick={onBack}
-                            className="mt-4 text-primary font-medium hover:underline"
-                        >
-                            시험 보러 가기
-                        </button>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {records.map((record) => (
-                            <div
-                                key={record.id}
-                                className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 transition-all hover:shadow-md"
-                            >
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                    <div className="flex-shrink-0">
-                                        <ResultCharacter score={record.score} size={64} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                {record.isPass ? 'PASS' : 'FAIL'}
-                                            </span>
-                                            {record.isRetry && (
-                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
-                                                    재시험
+                        <div className="space-y-4">
+                            {records.map((record, idx) => (
+                                <div
+                                    key={record.id}
+                                    style={{ animationDelay: `${idx * 0.05}s` }}
+                                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
+                                >
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div className="flex-shrink-0">
+                                            <ResultCharacter score={record.score} size={64} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {record.isPass ? 'PASS' : 'FAIL'}
                                                 </span>
-                                            )}
-                                            <span className="text-xs text-gray-400 flex items-center ml-1">
-                                                <Calendar className="w-3 h-3 mr-1" />
-                                                {formatDate(record.timestamp)}
-                                            </span>
+                                                {record.isRetry && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                                        재시험
+                                                    </span>
+                                                )}
+                                                <span className="text-xs text-gray-400 flex items-center ml-1">
+                                                    <Calendar className="w-3 h-3 mr-1" />
+                                                    {formatDate(record.timestamp)}
+                                                </span>
+                                            </div>
+                                            <h3 className="font-semibold text-gray-800 text-base md:text-lg mb-1">
+                                                {record.examNames.join(', ')}
+                                            </h3>
                                         </div>
-                                        <h3 className="font-semibold text-gray-800 text-base md:text-lg mb-1">
-                                            {record.examNames.join(', ')}
-                                        </h3>
-                                    </div>
 
-                                    <div className="flex items-center bg-gray-50 p-3 rounded-lg w-full md:w-auto md:gap-8">
-                                        <div className="flex-1 text-center">
-                                            <p className="text-[10px] text-gray-400 uppercase font-bold">Score</p>
-                                            <p className={`text-base md:text-lg font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
-                                                {record.score}%
-                                            </p>
+                                        <div className="flex items-center bg-gray-50 p-3 rounded-lg w-full md:w-auto md:gap-8">
+                                            <div className="flex-1 text-center">
+                                                <p className="text-[10px] text-gray-400 uppercase font-bold">Score</p>
+                                                <p className={`text-base md:text-lg font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
+                                                    {record.score}%
+                                                </p>
+                                            </div>
+                                            <div className="flex-1 text-center border-x border-gray-200 px-2 md:px-8">
+                                                <p className="text-[10px] text-gray-400 uppercase font-bold">Accuracy</p>
+                                                <p className="text-base md:text-lg font-bold text-gray-700">
+                                                    {record.correctCount}/{record.totalQuestions}
+                                                </p>
+                                            </div>
+                                            <div className="flex-1 text-center">
+                                                <p className="text-[10px] text-gray-400 uppercase font-bold">Time</p>
+                                                <p className="text-base md:text-lg font-bold text-gray-700 whitespace-nowrap">
+                                                    {Math.floor(record.timeTakenSeconds / 60)}분 {record.timeTakenSeconds % 60}초
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="flex-1 text-center border-x border-gray-200 px-2 md:px-8">
-                                            <p className="text-[10px] text-gray-400 uppercase font-bold">Accuracy</p>
-                                            <p className="text-base md:text-lg font-bold text-gray-700">
-                                                {record.correctCount}/{record.totalQuestions}
-                                            </p>
-                                        </div>
-                                        <div className="flex-1 text-center">
-                                            <p className="text-[10px] text-gray-400 uppercase font-bold">Time</p>
-                                            <p className="text-base md:text-lg font-bold text-gray-700 whitespace-nowrap">
-                                                {Math.floor(record.timeTakenSeconds / 60)}분 {record.timeTakenSeconds % 60}초
-                                            </p>
-                                        </div>
-                                    </div>
 
-                                    <button
-                                        onClick={(e) => handleDelete(record.id, e)}
-                                        className="p-2 text-gray-300 hover:text-red-500 transition-colors md:ml-2 self-end md:self-center"
-                                        title="삭제"
-                                    >
-                                        <Trash2 className="w-5 h-5" />
-                                    </button>
+                                        <button
+                                            onClick={(e) => handleDelete(record.id, e)}
+                                            className="p-2 text-gray-300 hover:text-red-500 transition-colors md:ml-2 self-end md:self-center"
+                                            title="삭제"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
