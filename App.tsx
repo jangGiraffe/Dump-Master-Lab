@@ -28,6 +28,8 @@ const App: React.FC = () => {
   const [isRetry, setIsRetry] = useState(false);
   const [isBossRaid, setIsBossRaid] = useState(false);
   const [bossRaidWrongIds, setBossRaidWrongIds] = useState<string[]>([]);
+  const [userHash, setUserHash] = useState<string>('');
+  const [timeTaken, setTimeTaken] = useState<number>(0);
 
   // Restore session on mount
   React.useEffect(() => {
@@ -60,8 +62,10 @@ const App: React.FC = () => {
           }
         }
 
+        const { userId } = JSON.parse(savedSession);
+
         // 3. If everything is fine, log in
-        handleLogin(tier, password);
+        handleLogin(tier, userId || (password ? 'user_' + password.substring(0, 6) : 'guest'), password);
       } catch (e) {
         console.error("Failed to restore session or validation failed", e);
         localStorage.removeItem(SESSION_KEY);
@@ -178,11 +182,13 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogin = (tier: UserTier, inputPassword?: string) => {
+  const handleLogin = (tier: UserTier, userId: string, inputPassword?: string) => {
     setUserTier(tier);
+    setUserHash(userId);
     // Save session to localStorage with timestamp
     localStorage.setItem(SESSION_KEY, JSON.stringify({
       tier,
+      userId,
       password: inputPassword,
       timestamp: Date.now()
     }));
@@ -197,7 +203,7 @@ const App: React.FC = () => {
     localStorage.removeItem(SESSION_KEY);
   };
 
-  const handleMenuSelect = (mode: 'quiz' | 'study' | 'history' | 'boss-raid') => {
+  const handleMenuSelect = async (mode: 'quiz' | 'study' | 'history' | 'boss-raid') => {
     if (mode === 'quiz') {
       setIsBossRaid(false);
       setStage(AppStage.SETUP);
@@ -206,7 +212,7 @@ const App: React.FC = () => {
     } else if (mode === 'history') {
       setStage(AppStage.HISTORY);
     } else if (mode === 'boss-raid') {
-      const records = historyService.getRecords();
+      const records = await historyService.getRecords(userHash);
       const allWrongIds = Array.from(new Set(records.flatMap(r => r.wrongQuestionIds || [])));
 
       if (allWrongIds.length === 0) {
@@ -220,8 +226,8 @@ const App: React.FC = () => {
     }
   };
 
-  const handleStartBossRaid = () => {
-    const records = historyService.getRecords();
+  const handleStartBossRaid = async () => {
+    const records = await historyService.getRecords(userHash);
     const allWrongIds = Array.from(new Set(records.flatMap(r => r.wrongQuestionIds || [])));
 
     if (allWrongIds.length === 0) {
@@ -327,6 +333,7 @@ const App: React.FC = () => {
       const score = Math.round((correctCount / quizQuestions.length) * 100);
       const isPass = score >= 72;
       const timeTakenSeconds = (config.timeLimitMinutes * 60) - timeLeft;
+      setTimeTaken(timeTakenSeconds);
 
       historyService.saveRecord({
         totalQuestions: quizQuestions.length,
@@ -337,7 +344,7 @@ const App: React.FC = () => {
         examNames: Array.from(new Set(quizQuestions.map(q => q.sourceVersion || 'Unknown'))),
         isRetry,
         wrongQuestionIds: wrongQuestions.map(q => q.id)
-      });
+      }, userHash);
     }
 
     setStage(AppStage.RESULT);
@@ -392,7 +399,7 @@ const App: React.FC = () => {
         )}
 
         {stage === AppStage.HISTORY && (
-          <History onBack={handleBackToMenu} />
+          <History onBack={handleBackToMenu} userId={userHash} />
         )}
 
         {stage === AppStage.SETUP && (
@@ -412,7 +419,7 @@ const App: React.FC = () => {
             timeLimitMinutes={config.timeLimitMinutes}
             onComplete={handleQuizComplete}
             wrongCountMap={(() => {
-              const records = historyService.getRecords();
+              const records = historyService.getLocalRecords();
               const map: Record<string, number> = {};
               records.forEach(r => {
                 r.wrongQuestionIds?.forEach(id => {
@@ -428,6 +435,7 @@ const App: React.FC = () => {
           <Result
             questions={quizQuestions}
             userAnswers={userAnswers}
+            timeTakenSeconds={timeTaken}
             onRestart={handleBackToMenu}
             onRetryWrong={handleRetryWrong}
           />

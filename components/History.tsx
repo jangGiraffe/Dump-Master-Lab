@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { HistoryRecord } from '../types';
 import { historyService } from '../services/historyService';
 import { formatTime, ResultCharacter } from '../utils';
-import { ChevronLeft, Trash2, Calendar, Award, Clock, BarChart2, BarChart3, BookOpen, Target } from 'lucide-react';
+import { ChevronLeft, Trash2, Calendar, Award, Clock, BarChart2, BarChart3, BookOpen, Target, Cloud, RefreshCw } from 'lucide-react';
 
 interface HistoryProps {
     onBack: () => void;
+    userId?: string;
 }
 
 const DashboardCard: React.FC<{ title: string; subtitle?: string; value: string | number; unit?: string; icon: React.ReactNode; color: string; delay?: string }> = ({ title, subtitle, value, unit, icon, color, delay }) => (
@@ -91,12 +92,20 @@ const ActivityHeatmap: React.FC<{ records: HistoryRecord[] }> = ({ records }) =>
     );
 };
 
-export const History: React.FC<HistoryProps> = ({ onBack }) => {
+export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
     const [records, setRecords] = useState<HistoryRecord[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const loadRecords = async () => {
+        setIsLoading(true);
+        const data = await historyService.getRecords(userId);
+        setRecords(data);
+        setIsLoading(false);
+    };
 
     useEffect(() => {
-        setRecords(historyService.getRecords());
-    }, []);
+        loadRecords();
+    }, [userId]);
 
     // 최근 20개 기록 추출
     const last20Records = records.slice(0, 20);
@@ -121,11 +130,38 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
         ? Math.round((last20Records.filter(r => r.isPass).length / last20Records.length) * 100)
         : 0;
 
-    const handleDelete = (id: string, e: React.MouseEvent) => {
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (confirm('이 기록을 삭제하시겠습니까?')) {
-            historyService.deleteRecord(id);
-            setRecords(historyService.getRecords());
+            await historyService.deleteRecord(id);
+            await loadRecords();
+        }
+    };
+
+    const handleSync = async () => {
+        if (!userId) {
+            alert('로그인 후 이용 가능합니다.');
+            return;
+        }
+
+        const localRecords = historyService.getLocalRecords();
+        if (localRecords.length === 0) {
+            alert('동기화할 로컬 데이터가 없습니다.');
+            return;
+        }
+
+        if (confirm('로컬에 저장된 이력을 서버로 동기화하시겠습니까?')) {
+            setIsLoading(true);
+            try {
+                const count = await historyService.syncLocalToCloud(userId);
+                alert(`${count}개의 새로운 기록이 서버로 동기화되었습니다.`);
+                await loadRecords();
+            } catch (e) {
+                console.error(e);
+                alert('동기화 중 오류가 발생했습니다.');
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 
@@ -148,7 +184,24 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
-                    <h2 className="text-2xl font-bold text-gray-800">나의 기록</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        나의 기록
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-md border font-black uppercase tracking-tighter ${historyService.getStorageMode() === 'CLOUD' ? 'bg-indigo-50 text-indigo-500 border-indigo-100' : 'bg-gray-100 text-gray-400 border-gray-200'}`}>
+                            {historyService.getStorageMode()}
+                        </span>
+                    </h2>
+
+                    {historyService.getStorageMode() === 'CLOUD' && (
+                        <button
+                            onClick={handleSync}
+                            disabled={isLoading || !userId}
+                            className="ml-auto flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors text-sm font-bold border border-indigo-100 disabled:opacity-50"
+                            title="로컬 데이터를 서버와 동기화합니다"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                            <span>서버로 동기화</span>
+                        </button>
+                    )}
                 </div>
 
                 {records.length > 0 && (
@@ -195,7 +248,12 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
                     </>
                 )}
 
-                {records.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        <p className="mt-4 text-gray-500 font-medium">기록을 불러오는 중...</p>
+                    </div>
+                ) : records.length === 0 ? (
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
                         <BarChart2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-500">아직 응시한 시험 기록이 없습니다.</p>

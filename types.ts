@@ -49,6 +49,7 @@ export interface HistoryRecord {
   examNames: string[]; // Versions used
   isRetry?: boolean;
   wrongQuestionIds?: string[]; // IDs of questions answered incorrectly
+  userId?: string; // Identification for cross-device sync
 }
 
 

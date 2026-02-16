@@ -8,6 +8,7 @@ import { toPng } from 'html-to-image';
 interface ResultProps {
   questions: Question[];
   userAnswers: Record<string, string>;
+  timeTakenSeconds: number;
   onRestart: () => void;
   onRetryWrong: (wrongQuestions: Question[]) => void;
 }
@@ -38,15 +39,11 @@ const ImageResultCard: React.FC<{ score: number }> = ({ score }) => (
   </div>
 );
 
-export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestart, onRetryWrong }) => {
+export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTakenSeconds, onRestart, onRetryWrong }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const resultCardRef = React.useRef<HTMLDivElement>(null);
-
-  // Get current record from history
-  const records = historyService.getRecords();
-  const currentRecord = records[0];
 
   const wrongQuestions = questions.filter(q => userAnswers[q.id] !== q.answer);
   const correctCount = questions.length - wrongQuestions.length;
@@ -55,8 +52,8 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, onRestar
   const isPass = score >= 72;
 
   // Time metrics
-  const totalTimeStr = currentRecord ? formatTime(currentRecord.timeTakenSeconds) : '--:--';
-  const avgTimePerQuestion = currentRecord ? Math.round(currentRecord.timeTakenSeconds / questions.length) : 0;
+  const totalTimeStr = formatTime(timeTakenSeconds);
+  const avgTimePerQuestion = questions.length > 0 ? Math.round(timeTakenSeconds / questions.length) : 0;
 
   const toggleExpand = (id: string) => {
     const isExpanding = expandedId !== id;
