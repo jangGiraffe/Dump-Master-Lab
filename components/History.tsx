@@ -66,7 +66,7 @@ const ActivityHeatmap: React.FC<{ records: HistoryRecord[] }> = ({ records }) =>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-8 animate-slideIn">
             <h3 className="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest flex items-center">
                 <Calendar className="w-3 h-3 mr-2" />
-                학습 잔디 (최근 12주)
+                학습 잔디 (최근 12주) <span className="ml-1 text-base">🌵</span>
             </h3>
             <div className="flex flex-wrap gap-1.5">
                 {heatmapDays.map((day, idx) => (

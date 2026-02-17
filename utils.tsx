@@ -1,7 +1,7 @@
 import React from 'react';
 import { Question } from './types';
 import { APP_CONFIG } from './config';
-import resultSpriteUrl from './img/result16.png';
+import resultSpriteUrl from './img/result16_new.png';
 
 // 점수(0~100)에 따른 16단계 이미지 인덱스 (0=최고, 15=최저)
 // Row 0: 100, 99-95, 94-90, 89-85
@@ -53,27 +53,43 @@ export const ResultCharacter: React.FC<{ score: number; size?: number }> = ({ sc
   const row = Math.floor(idx / 4);
   const message = RESULT_MESSAGES[idx];
 
-  // 퍼센트 기반으로 정확한 타일 추출 (이미지가 4의 배수가 아니어도 정확)
-  // background-size: 400% = 원본의 4배로 확대 → 한 칸이 컨테이너 크기와 동일
-  // background-position: 0%/33.333%/66.666%/100% 로 3칸 간격 배치
-  const posX = col === 0 ? '0%' : col === 1 ? '33.3333%' : col === 2 ? '66.6667%' : '100%';
-  const posY = row === 0 ? '0%' : row === 1 ? '33.3333%' : row === 2 ? '66.6667%' : '100%';
-
+  // 이미지 태그와 overflow hidden을 사용하는 방식으로 변경하여 렌더링 안정성 확보
+  // background-image 방식에서 발생하는 미세한 떨림(dancing) 현상 제거
+  // 컨테이너 너비를 size로 고정하여 텍스트 길이에 따른 레이아웃 시프트 방지
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '8px',
+      width: `${size}px`
+    }}>
       <div
         style={{
-          width: `${size}px`,
+          width: '100%',
           height: `${size}px`,
-          backgroundImage: `url(${resultSpriteUrl})`,
-          backgroundSize: '400% 400%',
-          backgroundPosition: `${posX} ${posY}`,
-          backgroundRepeat: 'no-repeat',
+          position: 'relative',
+          overflow: 'hidden',
           borderRadius: '12px',
-          imageRendering: 'auto',
+          flexShrink: 0, // Flex 컨테이너 내에서 크기 축소 방지
         }}
         title={message}
-      />
+      >
+        <img
+          src={resultSpriteUrl}
+          alt={message}
+          style={{
+            position: 'absolute',
+            top: `-${row * 100}%`,
+            left: `-${col * 100}%`,
+            width: '400%',
+            height: '400%',
+            maxWidth: 'none',
+            objectFit: 'fill',
+            imageRendering: 'auto',
+          }}
+        />
+      </div>
       <p style={{
         fontSize: size >= 100 ? '14px' : '11px',
         fontWeight: 600,
@@ -81,7 +97,9 @@ export const ResultCharacter: React.FC<{ score: number; size?: number }> = ({ sc
         textAlign: 'center',
         margin: 0,
         lineHeight: 1.3,
-        whiteSpace: 'pre-line',
+        whiteSpace: 'pre-wrap', // 줄바꿈 허용
+        wordBreak: 'keep-all',  // 단어 단위 줄바꿈
+        width: '100%',          // 너비 제한
       }}>
         {message}
       </p>
