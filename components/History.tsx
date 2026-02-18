@@ -140,7 +140,12 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
 
     const loadRecords = async () => {
         setIsLoading(true);
-        const data = await historyService.getRecords(userId);
+        // Force fetch from cloud/storage and log for debugging
+        const data = await historyService.getRecords(userId, true);
+
+        // Ensure strictly sorted by timestamp (newest first)
+        data.sort((a, b) => b.timestamp - a.timestamp);
+
         setRecords(data);
         setIsLoading(false);
     };
@@ -148,43 +153,6 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
     useEffect(() => {
         loadRecords();
     }, [userId]);
-
-    // 최근 20개 기록 추출
-    const last20Records = records.slice(0, 20);
-
-    // 평균 정답률 (최근 20회)
-    const avgScore = last20Records.length > 0
-        ? Math.round(last20Records.reduce((acc, r) => acc + r.score, 0) / last20Records.length)
-        : 0;
-
-    // 누적 푼 문제 수 (최근 20회)
-    const totalSolved = last20Records.reduce((acc, r) => acc + r.totalQuestions, 0);
-
-    // 누적 공부 시간 (최근 20회)
-    const totalTimeSpent = last20Records.reduce((acc, r) => acc + (r.timeTakenSeconds || 0), 0);
-
-    // 오늘 푼 데이터 계산 (정답 수 / 전체 문제 수)
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const todayRecords = records.filter(r => r.timestamp >= startOfToday);
-    const todaySolvedCount = todayRecords.reduce((acc, r) => acc + r.totalQuestions, 0);
-    const todayCorrectCount = todayRecords.reduce((acc, r) => acc + r.correctCount, 0);
-    const todayTimeSpent = todayRecords.reduce((acc, r) => acc + (r.timeTakenSeconds || 0), 0);
-
-    // 최근 합격률 (최근 20회 기준)
-    const recentPassRate = last20Records.length > 0
-        ? Math.round((last20Records.filter(r => r.isPass).length / last20Records.length) * 100)
-        : 0;
-
-    // 오늘 정답률
-    const todayAccuracy = todaySolvedCount > 0
-        ? Math.round((todayCorrectCount / todaySolvedCount) * 100)
-        : 0;
-
-    // 오늘 합격률
-    const todayPassRate = todayRecords.length > 0
-        ? Math.round((todayRecords.filter(r => r.isPass).length / todayRecords.length) * 100)
-        : 0;
 
     const formatStudyTime = (totalSeconds: number) => {
         const hours = Math.floor(totalSeconds / 3600);
@@ -234,8 +202,49 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
         })).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
     };
 
-    const last20ExamStats = getExamStats(last20Records);
+    // 오늘 푼 데이터 계산 (정답 수 / 전체 문제 수)
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const todayRecords = records.filter(r => r.timestamp >= startOfToday);
+    const todaySolvedCount = todayRecords.reduce((acc, r) => acc + r.totalQuestions, 0);
+    const todayCorrectCount = todayRecords.reduce((acc, r) => acc + r.correctCount, 0);
+    const todayTimeSpent = todayRecords.reduce((acc, r) => acc + (r.timeTakenSeconds || 0), 0);
+
+    // 오늘 정답률
+    const todayAccuracy = todaySolvedCount > 0
+        ? Math.round((todayCorrectCount / todaySolvedCount) * 100)
+        : 0;
+
+    // 오늘 합격률
+    const todayPassRate = todayRecords.length > 0
+        ? Math.round((todayRecords.filter(r => r.isPass).length / todayRecords.length) * 100)
+        : 0;
+
     const todayExamStats = getExamStats(todayRecords);
+
+    // 전체 기록 통계 (All Time Stats)
+    const allAvgScore = records.length > 0
+        ? Math.round(records.reduce((acc, r) => acc + r.score, 0) / records.length)
+        : 0;
+
+    const allTotalSolved = records.reduce((acc, r) => acc + r.totalQuestions, 0);
+    const allTotalTimeSpent = records.reduce((acc, r) => acc + (r.timeTakenSeconds || 0), 0);
+
+    const allPassRate = records.length > 0
+        ? Math.round((records.filter(r => r.isPass).length / records.length) * 100)
+        : 0;
+
+    const allExamStats = getExamStats(records);
+
+    // 전체 기록조차 오늘 기록과 동일한 경우 중복 표시 방지
+    const isAllSameAsToday = records.length === todayRecords.length;
+
+    const displayTitle = "전체 기간 성적 (All Time)";
+    const displayAvgScore = allAvgScore;
+    const displayTotalSolved = allTotalSolved;
+    const displayTotalTime = allTotalTimeSpent;
+    const displayPassRate = allPassRate;
+    const displayExamStats = allExamStats;
 
     const previousRecords = records.filter(r => r.timestamp < startOfToday);
 
@@ -347,57 +356,60 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                         <div className="animate-fadeIn">
                             <ActivityHeatmap records={records} />
 
-                            <div className="mb-10">
-                                <h3 className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-4 uppercase tracking-widest flex items-center">
-                                    <Clock className="w-3 h-3 mr-2" />
-                                    최근 20회 성적 (Last 20)
-                                </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                    <DashboardCard
-                                        title="평균 정답률"
-                                        value={avgScore}
-                                        unit="%"
-                                        icon={<BarChart3 />}
-                                        color="bg-blue-600"
-                                        delay="animate-slideInStagger1"
-                                    />
-                                    <DashboardCard
-                                        title="누적 문제 수"
-                                        value={totalSolved}
-                                        unit="개"
-                                        icon={<BookOpen />}
-                                        color="bg-indigo-600"
-                                        delay="animate-slideInStagger2"
-                                    />
-                                    <DashboardCard
-                                        title="누적 공부 시간"
-                                        value={formatStudyTime(totalTimeSpent)}
-                                        icon={<Clock />}
-                                        color="bg-amber-600"
-                                        delay="animate-slideInStagger3"
-                                    />
-                                    <DashboardCard
-                                        title="합격률"
-                                        value={recentPassRate}
-                                        unit="%"
-                                        icon={<Target />}
-                                        color="bg-rose-600"
-                                        delay="animate-slideInStagger4"
-                                    />
-                                </div>
-
-                                {last20ExamStats.length > 0 && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
-                                        {last20ExamStats.map((stat, idx) => (
-                                            <ExamPerformanceCard
-                                                key={stat.name}
-                                                {...stat}
-                                                delay={`animate-slideInStagger${(idx % 3) + 1}`}
-                                            />
-                                        ))}
+                            {/* 전체 기록이 오늘 기록과 다를 때만 표시 (중복 방지) */}
+                            {!isAllSameAsToday && (
+                                <div className="mb-10">
+                                    <h3 className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-4 uppercase tracking-widest flex items-center">
+                                        <Clock className="w-3 h-3 mr-2" />
+                                        {displayTitle}
+                                    </h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                        <DashboardCard
+                                            title="평균 정답률"
+                                            value={displayAvgScore}
+                                            unit="%"
+                                            icon={<BarChart3 />}
+                                            color="bg-blue-600"
+                                            delay="animate-slideInStagger1"
+                                        />
+                                        <DashboardCard
+                                            title="누적 문제 수"
+                                            value={displayTotalSolved}
+                                            unit="개"
+                                            icon={<BookOpen />}
+                                            color="bg-indigo-600"
+                                            delay="animate-slideInStagger2"
+                                        />
+                                        <DashboardCard
+                                            title="누적 공부 시간"
+                                            value={formatStudyTime(displayTotalTime)}
+                                            icon={<Clock />}
+                                            color="bg-amber-600"
+                                            delay="animate-slideInStagger3"
+                                        />
+                                        <DashboardCard
+                                            title="합격률"
+                                            value={displayPassRate}
+                                            unit="%"
+                                            icon={<Target />}
+                                            color="bg-rose-600"
+                                            delay="animate-slideInStagger4"
+                                        />
                                     </div>
-                                )}
-                            </div>
+
+                                    {displayExamStats.length > 0 && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
+                                            {displayExamStats.map((stat, idx) => (
+                                                <ExamPerformanceCard
+                                                    key={stat.name}
+                                                    {...stat}
+                                                    delay={`animate-slideInStagger${(idx % 3) + 1}`}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="mb-10">
                                 <h3 className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-4 uppercase tracking-widest flex items-center">

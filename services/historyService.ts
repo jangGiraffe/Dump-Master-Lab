@@ -36,7 +36,7 @@ export const historyService = {
 
         // 2. Update Local Cache
         const localRecords = historyService.getLocalRecords();
-        const updatedRecords = [newRecord, ...localRecords].slice(0, 100);
+        const updatedRecords = [newRecord, ...localRecords].slice(0, 1000);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRecords));
 
         return newRecord;
@@ -58,7 +58,7 @@ export const historyService = {
                 collection(db, 'history'),
                 where('userId', '==', userId),
                 orderBy('timestamp', 'desc'),
-                limit(100)
+                limit(1000)
             );
 
             const querySnapshot = await getDocs(q);
@@ -72,7 +72,7 @@ export const historyService = {
             let allRecords: HistoryRecord[] = allLocalData ? JSON.parse(allLocalData) : [];
 
             allRecords = allRecords.filter(r => r.userId !== userId);
-            const mergedRecords = [...records, ...allRecords].slice(0, 200);
+            const mergedRecords = [...records, ...allRecords].slice(0, 1000);
 
             localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedRecords));
 
