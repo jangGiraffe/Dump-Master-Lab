@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
+import { ThemeToggle } from './ThemeToggle';
 import { Dataset, QuizConfig, UserTier } from '../types';
 import { Settings, Play, ChevronLeft, ChevronRight, BookOpen, Info } from 'lucide-react';
 import { examService } from '../services/examService';
@@ -214,27 +214,28 @@ export const Setup: React.FC<SetupProps> = ({
   const effectiveMax = maxQuestions;
 
   return (
-    <div className="flex flex-col items-center justify-center flex-grow p-4 bg-gray-50">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
+    <div className="flex flex-col items-center justify-center flex-grow p-4 bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg w-full max-w-2xl border border-gray-100 dark:border-slate-700">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <button
               onClick={handleBack}
-              className="mr-3 p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
+              className="mr-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors text-gray-500 dark:text-slate-400"
               title="뒤로 가기"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <Settings className="w-5 h-5 text-primary mr-2" />
-            <h2 className="text-xl font-semibold text-gray-800">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
               {isBossRaid ? '오답 보스전 설정' : '시험 설정'}
             </h2>
           </div>
 
+
           {/* User Mode Badge */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             {isBossRaid && (
-              <div className="px-3 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
+              <div className="px-3 py-1 rounded-full text-xs font-bold border bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800">
                 👹 BOSS RAID
               </div>
             )}
@@ -242,56 +243,57 @@ export const Setup: React.FC<SetupProps> = ({
               <div className={`
                 px-3 py-1 rounded-full text-xs font-bold border
                 ${userTier === 'V'
-                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
                   : userTier === 'N'
-                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                    : 'bg-gray-100 text-gray-700 border-gray-300'
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
+                    : 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'
                 }
               `}>
                 {userTier === 'V' ? '👑 VIP' : userTier === 'N' ? '😊 일반' : '👀 Guest'}
               </div>
             )}
+            <ThemeToggle />
           </div>
         </div>
 
         {!selectedExam ? (
           /* Step 1: Exam Selection */
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-700">시험 선택</h3>
+            <h3 className="text-lg font-medium text-gray-700 dark:text-slate-300">시험 선택</h3>
             <div className="grid grid-cols-1 gap-4">
               {exams.map(exam => (
                 <button
                   key={exam.code}
                   onClick={() => handleExamClick(exam)}
                   className={`flex items-center justify-between p-4 border rounded-lg transition-all text-left shadow-sm hover:shadow-md ${exam.hasData
-                    ? 'border-gray-200 hover:border-primary hover:bg-blue-50 bg-white'
-                    : 'border-gray-100 bg-gray-50 opacity-70 grayscale-[0.5]'
+                    ? 'border-gray-200 dark:border-slate-600 hover:border-primary dark:hover:border-primary hover:bg-blue-50 dark:hover:bg-slate-700/50 bg-white dark:bg-slate-800'
+                    : 'border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 opacity-70 grayscale-[0.5]'
                     }`}
                 >
                   <div className="flex items-center">
-                    <div className={`${exam.hasData ? 'bg-blue-100' : 'bg-gray-200'} p-2 rounded-lg mr-4`}>
-                      <BookOpen className={`w-6 h-6 ${exam.hasData ? 'text-primary' : 'text-gray-400'}`} />
+                    <div className={`${exam.hasData ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-gray-200 dark:bg-slate-700'} p-2 rounded-lg mr-4`}>
+                      <BookOpen className={`w-6 h-6 ${exam.hasData ? 'text-primary dark:text-blue-400' : 'text-gray-400 dark:text-slate-500'}`} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <div className="font-bold text-gray-800">{exam.code}</div>
+                        <div className="font-bold text-gray-800 dark:text-white">{exam.code}</div>
                         {!exam.hasData && (
-                          <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold border border-amber-200">
+                          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold border border-amber-200 dark:border-amber-800">
                             준비 중
                           </span>
                         )}
                       </div>
-                      <div className="text-sm font-medium text-gray-700">{exam.name}</div>
-                      <div className="text-xs text-gray-500 mt-1">{exam.description}</div>
+                      <div className="text-sm font-medium text-gray-700 dark:text-slate-300">{exam.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-slate-500 mt-1">{exam.description}</div>
                       {(exam.officialCount || exam.officialTime) && (
                         <div className="flex gap-2 mt-2">
                           {exam.officialCount && (
-                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
+                            <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-600">
                               문항: {exam.officialCount}문항
                             </span>
                           )}
                           {exam.officialTime && (
-                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
+                            <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-600">
                               시간: {exam.officialTime}분
                             </span>
                           )}
@@ -299,7 +301,7 @@ export const Setup: React.FC<SetupProps> = ({
                       )}
                     </div>
                   </div>
-                  {exam.hasData && <ChevronRight className="w-5 h-5 text-gray-400" />}
+                  {exam.hasData && <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-600" />}
                 </button>
               ))}
             </div>
@@ -313,14 +315,14 @@ export const Setup: React.FC<SetupProps> = ({
         ) : (
           /* Step 2: Question Bank Selection */
           <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-100 rounded-md p-3 mb-4 flex items-center text-sm text-blue-800">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-md p-3 mb-4 flex items-center text-sm text-blue-800 dark:text-blue-300">
               <BookOpen className="w-4 h-4 mr-2" />
               <span className="font-semibold mr-1">선택된 시험:</span> {exams.find(e => e.code === selectedExam)?.name || selectedExam}
             </div>
 
             {/* Version Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 {isBossRaid ? '보스 문제 은행 선택' : '문제 은행 선택'} (다중 선택 가능)
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -351,24 +353,24 @@ export const Setup: React.FC<SetupProps> = ({
                         key={ds.id}
                         onClick={() => toggleVersion(ds.id)}
                         className={`cursor-pointer p-3 border rounded-lg flex items-center justify-between transition-all ${selectedVersions.includes(ds.id)
-                          ? 'border-primary bg-primary/5 shadow-sm'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                          ? 'border-primary bg-primary/5 dark:bg-primary/20 shadow-sm'
+                          : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 bg-white dark:bg-slate-800'
                           }`}
                       >
                         <div className="flex items-center text-sm">
                           {lang === 'KR' && (
-                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                               KR
                             </span>
                           )}
                           {lang === 'EN' && (
-                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 border border-gray-200 dark:border-slate-600">
                               EN
                             </span>
                           )}
-                          <span className="font-medium text-gray-700">{displayName}</span>
+                          <span className="font-medium text-gray-700 dark:text-slate-300">{displayName}</span>
                         </div>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedVersions.includes(ds.id) ? 'border-primary bg-primary' : 'border-gray-300 bg-white'
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedVersions.includes(ds.id) ? 'border-primary bg-primary' : 'border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700'
                           }`}>
                           {selectedVersions.includes(ds.id) && (
                             <div className="w-1.5 h-1.5 bg-white rounded-full" />
@@ -383,9 +385,9 @@ export const Setup: React.FC<SetupProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Question Count */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   문제 수
-                  {maxQuestions > 0 && <span className="font-normal text-gray-500 ml-1">(최대: {effectiveMax})</span>}
+                  {maxQuestions > 0 && <span className="font-normal text-gray-500 dark:text-slate-500 ml-1">(최대: {effectiveMax})</span>}
                 </label>
 
                 <div className="flex flex-wrap gap-2 mb-3">
@@ -405,7 +407,7 @@ export const Setup: React.FC<SetupProps> = ({
                       }}
                       className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${!isManualCount && questionCount === cnt
                         ? 'bg-primary border-primary text-white shadow-sm'
-                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                        : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-300 dark:hover:border-slate-500'
                         } ${cnt > effectiveMax ? 'opacity-40 cursor-not-allowed' : ''}`}
                       disabled={cnt > effectiveMax && userTier === 'V'}
                     >
@@ -432,7 +434,7 @@ export const Setup: React.FC<SetupProps> = ({
                           }}
                           className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${!isManualCount && questionCount === offCnt
                             ? 'bg-primary border-primary text-white shadow-sm'
-                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                            : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-300 dark:hover:border-slate-500'
                             } ${offCnt > effectiveMax ? 'opacity-40 cursor-not-allowed' : ''}`}
                           disabled={offCnt > effectiveMax && userTier === 'V'}
                         >
@@ -447,7 +449,7 @@ export const Setup: React.FC<SetupProps> = ({
                     onClick={() => setIsManualCount(true)}
                     className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${isManualCount
                       ? 'bg-primary border-primary text-white shadow-sm'
-                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                      : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-300 dark:hover:border-slate-500'
                       }`}
                   >
                     직접 입력
@@ -464,7 +466,7 @@ export const Setup: React.FC<SetupProps> = ({
                       onChange={handleQuestionCountChange}
                       disabled={selectedVersions.length === 0}
                       autoFocus
-                      className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 text-sm"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 dark:placeholder-slate-500 text-sm"
                       placeholder="문제 수를 입력하세요"
                     />
                     {userTier !== 'V' && questionCount >= 5 && (
@@ -480,24 +482,24 @@ export const Setup: React.FC<SetupProps> = ({
 
               {/* Time Limit */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">제한 시간 (분)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">제한 시간 (분)</label>
                 <input
                   type="number"
                   min="1"
                   max="300"
                   value={timeLimit}
                   onChange={(e) => setTimeLimit(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 text-sm"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 dark:placeholder-slate-500 text-sm"
                 />
               </div>
             </div>
 
-            <div className="pt-4 border-t border-gray-100">
+            <div className="pt-4 border-t border-gray-100 dark:border-slate-700">
               <button
                 onClick={handleStart}
                 disabled={selectedVersions.length === 0 || questionCount < 1}
                 className={`w-full flex items-center justify-center py-2.5 px-4 rounded-lg font-semibold text-white transition-all text-sm ${selectedVersions.length === 0 || questionCount < 1
-                  ? 'bg-gray-300 cursor-not-allowed'
+                  ? 'bg-gray-300 dark:bg-slate-700 cursor-not-allowed'
                   : isBossRaid
                     ? 'bg-red-600 hover:bg-red-700 shadow-md hover:shadow-lg'
                     : 'bg-primary hover:bg-blue-700 shadow-md hover:shadow-lg'

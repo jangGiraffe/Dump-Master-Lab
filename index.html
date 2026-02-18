@@ -12,6 +12,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
@@ -20,6 +21,13 @@
             success: '#22c55e',
             danger: '#ef4444',
             warning: '#eab308',
+            dark: {
+              bg: '#0f172a',
+              card: '#1e293b',
+              text: '#f1f5f9',
+              muted: '#94a3b8',
+              border: '#334155'
+            }
           },
           keyframes: {
             fadeIn: {
@@ -46,12 +54,30 @@
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f8fafc;
     }
 
     .no-select {
       user-select: none;
       -webkit-user-select: none;
+    }
+
+    /* Custom Scrollbar for Dark Mode */
+    .dark ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .dark ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
     }
   </style>
   <script type="importmap">
@@ -72,7 +98,7 @@
   <link rel="stylesheet" href="/index.css">
 </head>
 
-<body>
+<body class="bg-gray-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

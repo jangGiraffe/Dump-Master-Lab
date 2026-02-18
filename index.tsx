@@ -8,7 +8,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations()
       .then((registrations) => {
         for (const registration of registrations) {
-          registration.unregister().catch(() => {});
+          registration.unregister().catch(() => { });
         }
       })
       .catch((err) => {
@@ -24,9 +24,13 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+import { ThemeProvider } from './context/ThemeContext';
+
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </React.StrictMode>
 );

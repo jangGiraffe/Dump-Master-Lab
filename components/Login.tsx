@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { authenticateUser } from '../utils';
 import { UserTier } from '../types';
 import { Lock } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 interface LoginProps {
   onLogin: (tier: UserTier, userId: string, password?: string) => void;
@@ -45,20 +46,23 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center flex-grow p-4">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+    <div className="flex flex-col items-center justify-center flex-grow p-4 bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-md w-full max-w-md border border-gray-100 dark:border-slate-700">
         <div className="flex justify-center mb-6">
-          <div className="bg-primary/10 p-4 rounded-full">
+          <div className="bg-primary/10 dark:bg-primary/20 p-4 rounded-full">
             <Lock className="w-8 h-8 text-primary" />
           </div>
         </div>
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
+        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-white">
           {isGuestMode ? 'Guest 접속' : '시험 접속'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="userId" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               사용자 ID (동기화용)
             </label>
             <input
@@ -66,7 +70,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               id="userId"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
-              className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors placeholder-gray-400"
+              className="w-full px-4 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors placeholder-gray-400 dark:placeholder-slate-400"
               placeholder="본인만의 ID를 입력하세요"
               autoFocus
             />
@@ -74,7 +78,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           {!isGuestMode && (
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                 비밀번호
               </label>
               <input
@@ -82,7 +86,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors placeholder-gray-400"
+                className="w-full px-4 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors placeholder-gray-400 dark:placeholder-slate-400"
                 placeholder="비밀번호를 입력하세요"
               />
             </div>
@@ -100,9 +104,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div className="relative flex items-center justify-center my-4">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-gray-300" />
+              <span className="w-full border-t border-gray-300 dark:border-slate-600" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase bg-white px-2 text-gray-500">
+            <div className="relative flex justify-center text-xs uppercase bg-white dark:bg-slate-800 px-2 text-gray-500 dark:text-slate-400">
               OR
             </div>
           </div>
@@ -110,7 +114,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <button
             type="button"
             onClick={() => setIsGuestMode(!isGuestMode)}
-            className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium py-2 px-4 rounded-md transition-colors border border-gray-200 text-sm"
+            className="w-full bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-600 dark:text-slate-200 font-medium py-2 px-4 rounded-md transition-colors border border-gray-200 dark:border-slate-600 text-sm"
           >
             {isGuestMode ? '비밀번호 로그인으로 변경' : 'Guest 모드로 전환'}
           </button>

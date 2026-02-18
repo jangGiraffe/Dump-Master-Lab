@@ -448,7 +448,7 @@ const App: React.FC = () => {
         )}
 
         {stage === AppStage.STUDY && (
-          <Study onBack={handleBackToMenu} />
+          <Study onBack={handleBackToMenu} userTier={userTier} />
         )}
 
         {stage === AppStage.HISTORY && (
@@ -491,6 +491,13 @@ const App: React.FC = () => {
             timeTakenSeconds={timeTaken}
             onRestart={handleBackToMenu}
             onRetryWrong={handleRetryWrong}
+            examCodes={config ?
+              datasets
+                .filter(d => config.selectedVersions.includes(d.id))
+                .map(d => d.examCode || 'Uncategorized')
+                .filter((v, i, a) => a.indexOf(v) === i)
+              : []
+            }
           />
         )}
       </main>
