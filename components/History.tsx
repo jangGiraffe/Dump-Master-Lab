@@ -31,6 +31,47 @@ const DashboardCard: React.FC<{ title: string; subtitle?: string; value: string 
     </div>
 );
 
+const ExamPerformanceCard: React.FC<{
+    name: string;
+    avgScore: number;
+    totalSolved: number;
+    passRate: number;
+    attempts: number;
+    delay?: string;
+}> = ({ name, avgScore, totalSolved, passRate, attempts, delay }) => (
+    <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-4 border border-gray-100 dark:border-slate-700 hover:shadow-md transition-all animate-slideIn ${delay || ''}`}>
+        <div className="flex justify-between items-start mb-3">
+            <div className="flex-1 min-w-0">
+                <h4 className="text-[13px] font-black text-gray-800 dark:text-white truncate mb-0.5" title={name}>{name}</h4>
+                <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tighter">{attempts}회 응시</span>
+                    <span className="w-0.5 h-0.5 rounded-full bg-gray-300 dark:bg-slate-600" />
+                    <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tighter">{totalSolved}문제</span>
+                </div>
+            </div>
+            <div className={`text-[10px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 ${avgScore >= 72 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                <span className="opacity-70 text-[8px] font-bold">정답률</span>
+                {avgScore}%
+            </div>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div
+                    className={`h-full transition-all duration-1000 ${avgScore >= 72 ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                    style={{ width: `${avgScore}%` }}
+                />
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+                <Target className="w-2.5 h-2.5 text-rose-500" />
+                <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">
+                    <span className="text-[8px] opacity-60 mr-0.5">합격률</span>
+                    {passRate}%
+                </span>
+            </div>
+        </div>
+    </div>
+);
+
 const ActivityHeatmap: React.FC<{ records: HistoryRecord[] }> = ({ records }) => {
     // Generate last 12 weeks of dates
     const weeks = 12;
@@ -151,13 +192,50 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
         const seconds = totalSeconds % 60;
 
         if (hours > 0) {
-            return `${hours}시간 ${minutes}분`;
+            return `${hours}시간 ${minutes}분 `;
         }
         if (minutes > 0) {
             return `${minutes}분 ${seconds}초`;
         }
         return `${seconds}초`;
     };
+
+    const getExamStats = (recordList: HistoryRecord[]) => {
+        const map: Record<string, {
+            totalQuestions: number;
+            correctCount: number;
+            attempts: number;
+            passCount: number;
+            lastTimestamp: number;
+        }> = {};
+
+        recordList.forEach(r => {
+            r.examNames.forEach(name => {
+                if (!map[name]) {
+                    map[name] = { totalQuestions: 0, correctCount: 0, attempts: 0, passCount: 0, lastTimestamp: 0 };
+                }
+                map[name].totalQuestions += r.totalQuestions;
+                map[name].correctCount += r.correctCount;
+                map[name].attempts += 1;
+                if (r.isPass) map[name].passCount += 1;
+                if (r.timestamp > map[name].lastTimestamp) {
+                    map[name].lastTimestamp = r.timestamp;
+                }
+            });
+        });
+
+        return Object.entries(map).map(([name, stats]) => ({
+            name,
+            avgScore: stats.totalQuestions > 0 ? Math.round((stats.correctCount / stats.totalQuestions) * 100) : 0,
+            totalSolved: stats.totalQuestions,
+            passRate: stats.attempts > 0 ? Math.round((stats.passCount / stats.attempts) * 100) : 0,
+            attempts: stats.attempts,
+            lastTimestamp: stats.lastTimestamp
+        })).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+    };
+
+    const last20ExamStats = getExamStats(last20Records);
+    const todayExamStats = getExamStats(todayRecords);
 
     const previousRecords = records.filter(r => r.timestamp < startOfToday);
 
@@ -274,7 +352,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                     <Clock className="w-3 h-3 mr-2" />
                                     최근 20회 성적 (Last 20)
                                 </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                     <DashboardCard
                                         title="평균 정답률"
                                         value={avgScore}
@@ -307,6 +385,18 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                         delay="animate-slideInStagger4"
                                     />
                                 </div>
+
+                                {last20ExamStats.length > 0 && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
+                                        {last20ExamStats.map((stat, idx) => (
+                                            <ExamPerformanceCard
+                                                key={stat.name}
+                                                {...stat}
+                                                delay={`animate-slideInStagger${(idx % 3) + 1}`}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mb-10">
@@ -314,7 +404,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                     <Calendar className="w-3 h-3 mr-2" />
                                     오늘의 성적 (Today)
                                 </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                     <DashboardCard
                                         title="오늘 정답률"
                                         value={todayAccuracy}
@@ -347,6 +437,18 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                         delay="animate-slideInStagger4"
                                     />
                                 </div>
+
+                                {todayExamStats.length > 0 && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
+                                        {todayExamStats.map((stat, idx) => (
+                                            <ExamPerformanceCard
+                                                key={stat.name}
+                                                {...stat}
+                                                delay={`animate-slideInStagger${(idx % 3) + 1}`}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-10">
