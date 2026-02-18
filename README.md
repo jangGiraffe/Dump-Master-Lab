@@ -85,6 +85,40 @@ VITE_STORAGE_MODE=CLOUD
 - **캐시 기반 조회**: '나의 기록' 페이지 진입 시 DB를 매번 읽지 않고 로컬 데이터를 즉시 표출하여 로딩 속도를 극대화했습니다.
 - **수동 동기화**: 로컬에만 쌓인 새로운 기록을 서버로 백업하고 싶을 때 '서버로 동기화' 버튼을 사용합니다. (이때만 DB를 강제로 재조회합니다.)
 
+## ☁️ 클라우드 백업 및 관리 (GCS Handler)
+
+개발에 필요한 핵심 설정 파일 및 데이터들을 Google Cloud Storage(GCS)에 안전하게 백업하고 동기화하기 위한 Python 스크립트(`gcs_handler.py`)를 제공합니다.
+
+### 1. 사전 준비
+- **라이브러리 설치**:
+  ```bash
+  pip install google-cloud-storage python-dotenv
+  ```
+- **인증키 설정**: GCP 서비스 계정에서 다운로드한 JSON 키 파일의 이름을 `gcp-key.json`으로 변경하여 프로젝트 루트에 배치합니다.
+- **환경 변수 설정**: `.env` 파일에 아래 항목을 추가합니다.
+  ```env
+  GCS_BUCKET_NAME=your-bucket-name
+  GOOGLE_APPLICATION_CREDENTIALS=./gcp-key.json
+  ```
+
+### 2. 주요 명령어
+- **전체 업로드 (백업)**: 중요 파일(`.env`, `config.ts`, `dump/`, `services/` 등)을 한꺼번에 업로드합니다.
+  ```bash
+  py gcs_handler.py upload-all
+  ```
+- **전체 다운로드 (복구)**: 버킷의 모든 파일을 로컬의 `tmp/download/` 폴더로 내려받습니다.
+  ```bash
+  py gcs_handler.py download-all
+  ```
+- **개별 파일 업로드/다운로드**:
+  ```bash
+  # 업로드
+  py gcs_handler.py upload <로컬경로> <버킷저장경로>
+  # 다운로드
+  py gcs_handler.py download <버킷파일경로> [로컬저장경로]
+  ```
+
+
 ## 🔐 데이터 관리 및 암호화 (Data Workflow)
 
 보안을 위해 **원본 데이터**는 Git에 올리지 않고, **암호화된 데이터**만 배포합니다.
