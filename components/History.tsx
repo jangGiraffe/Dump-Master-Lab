@@ -119,17 +119,47 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
     // 누적 푼 문제 수 (최근 20회)
     const totalSolved = last20Records.reduce((acc, r) => acc + r.totalQuestions, 0);
 
+    // 누적 공부 시간 (최근 20회)
+    const totalTimeSpent = last20Records.reduce((acc, r) => acc + (r.timeTakenSeconds || 0), 0);
+
     // 오늘 푼 데이터 계산 (정답 수 / 전체 문제 수)
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const todayRecords = records.filter(r => r.timestamp >= startOfToday);
     const todaySolvedCount = todayRecords.reduce((acc, r) => acc + r.totalQuestions, 0);
     const todayCorrectCount = todayRecords.reduce((acc, r) => acc + r.correctCount, 0);
+    const todayTimeSpent = todayRecords.reduce((acc, r) => acc + (r.timeTakenSeconds || 0), 0);
 
     // 최근 합격률 (최근 20회 기준)
     const recentPassRate = last20Records.length > 0
         ? Math.round((last20Records.filter(r => r.isPass).length / last20Records.length) * 100)
         : 0;
+
+    // 오늘 정답률
+    const todayAccuracy = todaySolvedCount > 0
+        ? Math.round((todayCorrectCount / todaySolvedCount) * 100)
+        : 0;
+
+    // 오늘 합격률
+    const todayPassRate = todayRecords.length > 0
+        ? Math.round((todayRecords.filter(r => r.isPass).length / todayRecords.length) * 100)
+        : 0;
+
+    const formatStudyTime = (totalSeconds: number) => {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+            return `${hours}시간 ${minutes}분`;
+        }
+        if (minutes > 0) {
+            return `${minutes}분 ${seconds}초`;
+        }
+        return `${seconds}초`;
+    };
+
+    const previousRecords = records.filter(r => r.timestamp < startOfToday);
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -239,106 +269,236 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                         <div className="animate-fadeIn">
                             <ActivityHeatmap records={records} />
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                                <DashboardCard
-                                    title="평균 정답률"
-                                    subtitle="Last 20"
-                                    value={avgScore}
-                                    unit="%"
-                                    icon={<BarChart3 />}
-                                    color="bg-blue-600"
-                                    delay="animate-slideInStagger1"
-                                />
-                                <DashboardCard
-                                    title="누적 문제 수"
-                                    subtitle="Last 20"
-                                    value={totalSolved}
-                                    unit="개"
-                                    icon={<BookOpen />}
-                                    color="bg-indigo-600"
-                                    delay="animate-slideInStagger2"
-                                />
-                                <DashboardCard
-                                    title="오늘 정답 수"
-                                    value={todayCorrectCount}
-                                    unit={`/ ${todaySolvedCount} 개`}
-                                    icon={<Calendar />}
-                                    color="bg-emerald-600"
-                                    delay="animate-slideInStagger3"
-                                />
-                                <DashboardCard
-                                    title="최근 합격률"
-                                    subtitle="Last 20"
-                                    value={recentPassRate}
-                                    unit="%"
-                                    icon={<Target />}
-                                    color="bg-rose-600"
-                                    delay="animate-slideInStagger4"
-                                />
+                            <div className="mb-10">
+                                <h3 className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-4 uppercase tracking-widest flex items-center">
+                                    <Clock className="w-3 h-3 mr-2" />
+                                    최근 20회 성적 (Last 20)
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <DashboardCard
+                                        title="평균 정답률"
+                                        value={avgScore}
+                                        unit="%"
+                                        icon={<BarChart3 />}
+                                        color="bg-blue-600"
+                                        delay="animate-slideInStagger1"
+                                    />
+                                    <DashboardCard
+                                        title="누적 문제 수"
+                                        value={totalSolved}
+                                        unit="개"
+                                        icon={<BookOpen />}
+                                        color="bg-indigo-600"
+                                        delay="animate-slideInStagger2"
+                                    />
+                                    <DashboardCard
+                                        title="누적 공부 시간"
+                                        value={formatStudyTime(totalTimeSpent)}
+                                        icon={<Clock />}
+                                        color="bg-amber-600"
+                                        delay="animate-slideInStagger3"
+                                    />
+                                    <DashboardCard
+                                        title="합격률"
+                                        value={recentPassRate}
+                                        unit="%"
+                                        icon={<Target />}
+                                        color="bg-rose-600"
+                                        delay="animate-slideInStagger4"
+                                    />
+                                </div>
                             </div>
 
-                            <div className="space-y-4">
-                                {records.map((record, idx) => (
-                                    <div
-                                        key={record.id}
-                                        style={{ animationDelay: `${idx * 0.05}s` }}
-                                        className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
-                                    >
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                            <div className="flex-shrink-0">
-                                                <ResultCharacter score={record.score} size={64} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                                                        {record.isPass ? 'PASS' : 'FAIL'}
-                                                    </span>
-                                                    {record.isRetry && (
-                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-                                                            재시험
-                                                        </span>
-                                                    )}
-                                                    <span className="text-xs text-gray-400 dark:text-slate-500 flex items-center ml-1">
-                                                        <Calendar className="w-3 h-3 mr-1" />
-                                                        {formatDate(record.timestamp)}
-                                                    </span>
-                                                </div>
-                                                <h3 className="font-semibold text-gray-800 dark:text-white text-base md:text-lg mb-1">
-                                                    {record.examNames.join(', ')}
-                                                </h3>
-                                            </div>
+                            <div className="mb-10">
+                                <h3 className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-4 uppercase tracking-widest flex items-center">
+                                    <Calendar className="w-3 h-3 mr-2" />
+                                    오늘의 성적 (Today)
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <DashboardCard
+                                        title="오늘 정답률"
+                                        value={todayAccuracy}
+                                        unit="%"
+                                        icon={<Award />}
+                                        color="bg-emerald-600"
+                                        delay="animate-slideInStagger1"
+                                    />
+                                    <DashboardCard
+                                        title="오늘 푼 문제수"
+                                        value={todaySolvedCount}
+                                        unit="개"
+                                        icon={<Calendar />}
+                                        color="bg-teal-600"
+                                        delay="animate-slideInStagger2"
+                                    />
+                                    <DashboardCard
+                                        title="오늘 공부 시간"
+                                        value={formatStudyTime(todayTimeSpent)}
+                                        icon={<Clock />}
+                                        color="bg-cyan-600"
+                                        delay="animate-slideInStagger3"
+                                    />
+                                    <DashboardCard
+                                        title="오늘 합격률"
+                                        value={todayPassRate}
+                                        unit="%"
+                                        icon={<Target />}
+                                        color="bg-emerald-500"
+                                        delay="animate-slideInStagger4"
+                                    />
+                                </div>
+                            </div>
 
-                                            <div className="flex items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-lg w-full md:w-auto md:gap-8">
-                                                <div className="flex-1 text-center">
-                                                    <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Score</p>
-                                                    <p className={`text-base md:text-lg font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
-                                                        {record.score}%
-                                                    </p>
-                                                </div>
-                                                <div className="flex-1 text-center border-x border-gray-200 dark:border-slate-600 px-2 md:px-8">
-                                                    <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Accuracy</p>
-                                                    <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200">
-                                                        {record.correctCount}/{record.totalQuestions}
-                                                    </p>
-                                                </div>
-                                                <div className="flex-1 text-center">
-                                                    <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Time</p>
-                                                    <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200 whitespace-nowrap">
-                                                        {Math.floor(record.timeTakenSeconds / 60)}분 {record.timeTakenSeconds % 60}초
-                                                    </p>
-                                                </div>
-                                            </div>
+                            <div className="space-y-10">
+                                {todayRecords.length > 0 && (
+                                    <div className="animate-slideIn">
+                                        <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-4 flex items-center">
+                                            <Calendar className="w-4 h-4 mr-2 text-emerald-500" />
+                                            오늘의 시험 기록
+                                            <span className="ml-2 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] rounded-full font-bold">
+                                                {todayRecords.length}
+                                            </span>
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {todayRecords.map((record, idx) => (
+                                                <div
+                                                    key={record.id}
+                                                    style={{ animationDelay: `${idx * 0.05}s` }}
+                                                    className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border-l-4 border-l-emerald-500 border border-gray-200 dark:border-slate-700 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
+                                                >
+                                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                        <div className="flex-shrink-0">
+                                                            <ResultCharacter score={record.score} size={64} />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                                    {record.isPass ? 'PASS' : 'FAIL'}
+                                                                </span>
+                                                                {record.isRetry && (
+                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                                                                        재시험
+                                                                    </span>
+                                                                )}
+                                                                <span className="text-xs text-gray-400 dark:text-slate-500 flex items-center ml-1">
+                                                                    <Clock className="w-3 h-3 mr-1" />
+                                                                    {formatDate(record.timestamp).split(' ').slice(2).join(' ')}
+                                                                </span>
+                                                            </div>
+                                                            <h3 className="font-semibold text-gray-800 dark:text-white text-base md:text-lg mb-1">
+                                                                {record.examNames.join(', ')}
+                                                            </h3>
+                                                        </div>
 
-                                            <button
-                                                onClick={(e) => handleDelete(record.id, e)}
-                                                className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors md:ml-2 self-end md:self-center"
-                                                title="삭제"
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                            </button>
+                                                        <div className="flex items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-lg w-full md:w-auto md:gap-8">
+                                                            <div className="flex-1 text-center">
+                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Score</p>
+                                                                <p className={`text-base md:text-lg font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
+                                                                    {record.score}%
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex-1 text-center border-x border-gray-200 dark:border-slate-600 px-2 md:px-8">
+                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Accuracy</p>
+                                                                <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200">
+                                                                    {record.correctCount}/{record.totalQuestions}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex-1 text-center">
+                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Time</p>
+                                                                <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200 whitespace-nowrap">
+                                                                    {Math.floor(record.timeTakenSeconds / 60)}분 {record.timeTakenSeconds % 60}초
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <button
+                                                            onClick={(e) => handleDelete(record.id, e)}
+                                                            className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors md:ml-2 self-end md:self-center"
+                                                            title="삭제"
+                                                        >
+                                                            <Trash2 className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
-                                ))}
+                                )}
+
+                                {previousRecords.length > 0 && (
+                                    <div className="animate-slideIn">
+                                        <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-4 flex items-center">
+                                            <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                                            이전 시험 기록
+                                            <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 text-[10px] rounded-full font-bold">
+                                                {previousRecords.length}
+                                            </span>
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {previousRecords.map((record, idx) => (
+                                                <div
+                                                    key={record.id}
+                                                    style={{ animationDelay: `${idx * 0.05}s` }}
+                                                    className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
+                                                >
+                                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                        <div className="flex-shrink-0">
+                                                            <ResultCharacter score={record.score} size={64} />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                                    {record.isPass ? 'PASS' : 'FAIL'}
+                                                                </span>
+                                                                {record.isRetry && (
+                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                                                                        재시험
+                                                                    </span>
+                                                                )}
+                                                                <span className="text-xs text-gray-400 dark:text-slate-500 flex items-center ml-1">
+                                                                    <Calendar className="w-3 h-3 mr-1" />
+                                                                    {formatDate(record.timestamp)}
+                                                                </span>
+                                                            </div>
+                                                            <h3 className="font-semibold text-gray-800 dark:text-white text-base md:text-lg mb-1">
+                                                                {record.examNames.join(', ')}
+                                                            </h3>
+                                                        </div>
+
+                                                        <div className="flex items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-lg w-full md:w-auto md:gap-8">
+                                                            <div className="flex-1 text-center">
+                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Score</p>
+                                                                <p className={`text-base md:text-lg font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
+                                                                    {record.score}%
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex-1 text-center border-x border-gray-200 dark:border-slate-600 px-2 md:px-8">
+                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Accuracy</p>
+                                                                <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200">
+                                                                    {record.correctCount}/{record.totalQuestions}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex-1 text-center">
+                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Time</p>
+                                                                <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200 whitespace-nowrap">
+                                                                    {Math.floor(record.timeTakenSeconds / 60)}분 {record.timeTakenSeconds % 60}초
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <button
+                                                            onClick={(e) => handleDelete(record.id, e)}
+                                                            className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors md:ml-2 self-end md:self-center"
+                                                            title="삭제"
+                                                        >
+                                                            <Trash2 className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )
