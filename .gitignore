@@ -5,7 +5,6 @@ unencrypted-dumps/*
 !dump/sample_questions.json
 !dump/MLA-C01-100Q-by-Gemini.json
 !unencrypted-dumps/sample_questions.json
-!unencrypted-dumps/MLA-C01-100Q-by-Gemini.json
 
 # Ignore specific files
 config.ts
@@ -35,6 +34,10 @@ pnpm-debug.log*
 Thumbs.db
 .env
 unencrypted-dumps/
+working/
 
 # Design files
 *.psd
+
+# Credentials
+gcp-key.json
