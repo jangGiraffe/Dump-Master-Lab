@@ -11,19 +11,20 @@ steps:
         # public/dump 디렉토리 생성 (Vite 정적 자산용)
         mkdir -p public/dump
         
-        # services 폴더가 없으면 생성
-        mkdir -p services
+        # src/shared/api 및 src/shared/config 폴더가 없으면 생성
+        mkdir -p src/shared/api
+        mkdir -p src/shared/config
 
-        # GCS에서 파일 다운로드 (경로는 버킷 구조에 맞게 조정 필요)
-        # 예: gs://my-bucket/config/dataService.tsx -> ./services/dataService.tsx
-        gsutil cp gs://${_GCS_BUCKET}/services/dataService.tsx ./services/dataService.tsx
-        gsutil cp gs://${_GCS_BUCKET}/services/pdfService.tsx ./services/pdfService.tsx
-        gsutil cp gs://${_GCS_BUCKET}/config.ts ./config.ts
+        # GCS에서 파일 다운로드 (경로는 FSD 구조 및 GCS 핸들러 변경 사항 반영)
+        gsutil cp gs://${_GCS_BUCKET}/src/shared/api/dataService.tsx ./src/shared/api/dataService.tsx
+        gsutil cp gs://${_GCS_BUCKET}/src/shared/api/pdfService.tsx ./src/shared/api/pdfService.tsx
+        gsutil cp gs://${_GCS_BUCKET}/src/shared/config/index.ts ./src/shared/config/index.ts
         gsutil cp gs://${_GCS_BUCKET}/.env ./.env
         
         # dump 폴더의 내용을 public/dump로 복사 (재귀적, 병렬)
-        # public 폴더에 넣어야 빌드 시 dist/dump로 포함되어 웹에서 접근 가능합니다.
-        gsutil -m cp -r gs://${_GCS_BUCKET}/dump/* ./public/dump/
+        # GCS 핸들러 변경으로 public/dump/... 구조일 것으로 가정, 혹은 기존 dump/... 구조 유지 시 호환성 고려
+        # 안전을 위해 dump/* 및 public/dump/* 모두 시도하거나, gcs_handler.py 업로드 방식(public/dump)에 맞춤
+        gsutil -m cp -r gs://${_GCS_BUCKET}/public/dump/* ./public/dump/
 
   # 2. Docker 이미지 빌드
   - name: 'gcr.io/cloud-builders/docker'
@@ -50,7 +51,7 @@ steps:
 
 # 변수 (트리거 설정에서 오버라이드 가능)
 substitutions:
-  _GCS_BUCKET: 'dump-master-lab' # GCS 버킷 이름으로 변경 필요
+  _GCS_BUCKET: '' # 빌드 트리거에서 설정 필요
 
 options:
   logging: CLOUD_LOGGING_ONLY

@@ -26,18 +26,22 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
       ]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "**/*.d.ts"
+    "**/*.d.ts",
+    "src/shared/api/pdfService.tsx.example",
+    "src/shared/api/dataService.tsx.sample",
+    "src/shared/config/index.ts.ex"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "build"
+    "build",
+    "**/*.ex"
   ]
 }

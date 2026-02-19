@@ -1,0 +1,255 @@
+[
+  {
+    "question": "AWS의 클라우드 컴퓨팅 서비스 중 '서버리스' 컴퓨팅을 제공하는 서비스는 무엇입니까?",
+    "options": [
+      "A. Amazon EC2",
+      "B. AWS Lambda",
+      "C. Amazon RDS",
+      "D. Amazon EBS"
+    ],
+    "answer": "B",
+    "explanation": "AWS Lambda는 서버를 프로비저닝하거나 관리하지 않고도 코드를 실행할 수 있게 해주는 이벤트 중심의 서버리스 컴퓨팅 서비스입니다."
+  },
+  {
+    "question": "S3 버킷의 객체에 대해 데이터 무결성을 확인하기 위해 사용하는 값은 무엇입니까?",
+    "options": [
+      "A. ETag (Entity Tag)",
+      "B. Instance ID",
+      "C. VPC ID",
+      "D. IAM Role ARN"
+    ],
+    "answer": "A",
+    "explanation": "ETag(엔티티 태그)는 객체의 특정 버전을 나타내는 해시입니다. S3에 업로드된 객체의 무결성을 검증하는 데 자주 사용됩니다."
+  },
+  {
+    "question": "관계형 데이터베이스 서비스로, 확장성이 뛰어나고 관리가 용이한 AWS 서비스는?",
+    "options": [
+      "A. Amazon DynamoDB",
+      "B. Amazon Redshift",
+      "C. Amazon RDS",
+      "D. Amazon ElastiCache"
+    ],
+    "answer": "C",
+    "explanation": "Amazon RDS(Relational Database Service)는 클라우드에서 관계형 데이터베이스를 간편하게 설정, 운영 및 확장할 수 있는 관리형 서비스입니다."
+  },
+  {
+    "question": "NoSQL 데이터베이스 서비스로, 키-값 및 문서 데이터 모델을 지원하며 밀리초 단위의 성능을 제공하는 AWS 서비스는?",
+    "options": [
+      "A. Amazon RDS",
+      "B. Amazon DynamoDB",
+      "C. Amazon DocumentDB",
+      "D. Amazon Neptune"
+    ],
+    "answer": "B",
+    "explanation": "Amazon DynamoDB는 확장성이 뛰어난 완전 관리형 NoSQL 데이터베이스 서비스입니다."
+  },
+  {
+    "question": "데이터 웨어하우징 서비스로, 복잡한 쿼리와 대규모 데이터 세트 분석에 최적화된 AWS 서비스는?",
+    "options": [
+      "A. Amazon S3",
+      "B. Amazon Athena",
+      "C. Amazon Redshift",
+      "D. Amazon Aurora"
+    ],
+    "answer": "C",
+    "explanation": "Amazon Redshift는 클라우드 기반의 고성능 데이터 웨어하우스 서비스입니다."
+  },
+  {
+    "question": "인메모리 데이터 캐시를 제공하여 애플리기케이션의 응답 속도를 향상시키는 서비스는?",
+    "options": [
+      "A. Amazon ElastiCache",
+      "B. Amazon CloudFront",
+      "C. Amazon MemoryDB",
+      "D. Amazon DAX"
+    ],
+    "answer": "A",
+    "explanation": "Amazon ElastiCache는 Redis 및 Memcached와 호환되는 관리형 인메모리 캐시 서비스입니다."
+  },
+  {
+    "question": "표준 SQL을 사용하여 Amazon S3의 데이터를 간편하게 분석할 수 있는 대화형 쿼리 서비스는?",
+    "options": [
+      "A. Amazon QuickSight",
+      "B. Amazon EMR",
+      "C. Amazon Athena",
+      "D. AWS Glue"
+    ],
+    "answer": "C",
+    "explanation": "Amazon Athena는 서버리스 대화형 쿼리 서비스로, S3에 저장된 데이터를 SQL로 분석할 수 있게 해줍니다."
+  },
+  {
+    "question": "관계형 데이터베이스 엔진 중 AWS에서 클라우드 전용으로 재설계하여 고성능과 가용성을 제공하는 서비스는?",
+    "options": [
+      "A. Amazon RDS for MySQL",
+      "B. Amazon Aurora",
+      "C. Amazon RDS for PostgreSQL",
+      "D. Amazon Redshift"
+    ],
+    "answer": "B",
+    "explanation": "Amazon Aurora는 MySQL 및 PostgreSQL과 호환되며 클라우드에 최적화된 고성능 관계형 데이터베이스입니다."
+  },
+  {
+    "question": "완전 관리형 그래프 데이터베이스 서비스로, 상호 연결성이 높은 데이터 세트를 구축하고 실행하는 데 적합한 서비스는?",
+    "options": [
+      "A. Amazon Neptune",
+      "B. Amazon Keyspaces",
+      "C. Amazon Timestream",
+      "D. Amazon DocumentDB"
+    ],
+    "answer": "A",
+    "explanation": "Amazon Neptune은 빠르고 신뢰할 수 있는 완전 관리형 그래프 데이터베이스 서비스입니다."
+  },
+  {
+    "question": "MongoDB와 호환되는 완전 관리형 문서 데이터베이스 서비스는?",
+    "options": [
+      "A. Amazon DynamoDB",
+      "B. Amazon DocumentDB",
+      "C. Amazon RDS",
+      "D. Amazon AppSync"
+    ],
+    "answer": "B",
+    "explanation": "Amazon DocumentDB는 MongoDB 워크로드를 지원하는 확장 가능한 관리형 문서 데이터베이스입니다."
+  },
+  {
+    "question": "시계열 데이터를 저장하고 분석하기 위한 완전 관리형 시계열 데이터베이스 서비스는?",
+    "options": [
+      "A. Amazon Kinesis",
+      "B. Amazon Timestream",
+      "C. Amazon OpenSearch Service",
+      "D. Amazon Managed Streaming for Apache Kafka"
+    ],
+    "answer": "B",
+    "explanation": "Amazon Timestream은 IoT 및 애플리케이션 모니터링에 자주 쓰이는 시계열 데이터 전용 데이터베이스입니다."
+  },
+  {
+    "question": "Apache Cassandra와 호환되는 확장 가능하고 가용성이 높은 서버리스 데이터베이스 서비스는?",
+    "options": [
+      "A. Amazon Keyspaces",
+      "B. Amazon Quantum Ledger Database (QLDB)",
+      "C. Amazon DynamoDB",
+      "D. Amazon Neptune"
+    ],
+    "answer": "A",
+    "explanation": "Amazon Keyspaces는 Apache Cassandra 호환 서버리스 데이터베이스 서비스입니다."
+  },
+  {
+    "question": "데이터 변경 사항을 투명하고 변경 불가능하게 기록하며 검증 가능한 로그를 제공하는 원장 데이터베이스는?",
+    "options": [
+      "A. AWS Managed Blockchain",
+      "B. Amazon QLDB",
+      "C. Amazon S3 Glacier",
+      "D. Amazon EBS"
+    ],
+    "answer": "B",
+    "explanation": "Amazon QLDB(Quantum Ledger Database)는 중앙 집중식 기관이 소유한 변경 불가능하고 검증 가능한 트랜잭션 로그를 제공합니다."
+  },
+  {
+    "question": "데이터의 ETL(추출, 변환, 로드) 작업을 자동화하고 관리해 주는 서버리스 데이터 통합 서비스는?",
+    "options": [
+      "A. AWS Lambda",
+      "B. AWS Glue",
+      "C. AWS Data Pipeline",
+      "D. Amazon Kinesis"
+    ],
+    "answer": "B",
+    "explanation": "AWS Glue는 분석을 위해 데이터를 쉽게 검색, 준비, 결합할 수 있게 해주는 완전 관리형 ETL 서비스입니다."
+  },
+  {
+    "question": "Amazon RDS에서 가용성을 높이기 위해 다른 가용 영역(AZ)에 복제본을 두는 기능은?",
+    "options": [
+      "A. Read Replica",
+      "B. Multi-AZ Deployment",
+      "C. Cross-Region Replication",
+      "D. Auto Scaling"
+    ],
+    "answer": "B",
+    "explanation": "Multi-AZ 배포는 데이터베이스 인스턴스의 고가용성과 장애 조치 지원을 제공합니다."
+  },
+  {
+    "question": "Amazon RDS의 읽기 성능을 확장하기 위해 사용하는 기능은?",
+    "options": [
+      "A. Multi-AZ Deployment",
+      "B. Read Replica",
+      "C. Snapshot",
+      "D. Provisioned IOPS"
+    ],
+    "answer": "B",
+    "explanation": "Read Replica(읽기 전용 복제본)를 사용하면 읽기 트래픽이 많은 워크로드의 부하를 분산할 수 있습니다."
+  },
+  {
+    "question": "DynamoDB의 읽기 성능을 가속화하기 위해 사용하는 인메모리 캐시 서비스는?",
+    "options": [
+      "A. ElastiCache",
+      "B. DAX (DynamoDB Accelerator)",
+      "C. CloudFront",
+      "D. Global Tables"
+    ],
+    "answer": "B",
+    "explanation": "DAX는 DynamoDB를 위한 완전 관리형 가용 인메모리 캐시로 성능을 대폭 향상시킵니다."
+  },
+  {
+    "question": "전 세계 여러 AWS 리전에 데이터를 복제하여 로컬 수준의 읽기/쓰기 속도를 제공하는 DynamoDB 기능은?",
+    "options": [
+      "A. Local Secondary Index",
+      "B. Global Tables",
+      "C. Streams",
+      "D. On-demand Mode"
+    ],
+    "answer": "B",
+    "explanation": "Global Tables는 다중 리전, 다중 마스터 데이터베이스를 구축할 수 있게 해줍니다."
+  },
+  {
+    "question": "데이터베이스 마이그레이션을 쉽고 안전하게 도와주는 AWS 서비스는?",
+    "options": [
+      "A. AWS Snowball",
+      "B. AWS DMS (Database Migration Service)",
+      "C. AWS SMS (Server Migration Service)",
+      "D. AWS Direct Connect"
+    ],
+    "answer": "B",
+    "explanation": "AWS DMS는 데이터베이스를 AWS로 신속하고 안전하게 마이그레이션할 수 있도록 지원합니다."
+  },
+  {
+    "question": "실시간 로그 분석, 애플리케이션 모니터링 및 검색 기능을 제공하는 서비스는?",
+    "options": [
+      "A. Amazon CloudWatch",
+      "B. Amazon OpenSearch Service",
+      "C. Amazon Kinesis Video Streams",
+      "D. Amazon Redshift Spectrum"
+    ],
+    "answer": "B",
+    "explanation": "Amazon OpenSearch Service(구 Elasticsearch)는 대규모 로그 분석 및 검색 엔진 서비스입니다."
+  },
+  {
+    "question": "Amazon Aurora에서 스토리지 용량이 부족할 때 처리하는 방식은?",
+    "options": [
+      "A. 수동으로 볼륨 크기를 늘려야 함",
+      "B. 자동으로 최대 128TiB까지 확장됨",
+      "C. 새 인스턴스를 생성해야 함",
+      "D. 데이터를 백업하고 복구해야 함"
+    ],
+    "answer": "B",
+    "explanation": "Amazon Aurora는 데이터 증가에 따라 스토리지 볼륨을 자동으로 확장합니다."
+  },
+  {
+    "question": "데이터베이스 자격 증명을 안전하게 관리하고 자동으로 교체해 주는 서비스는?",
+    "options": [
+      "A. AWS IAM",
+      "B. AWS Secrets Manager",
+      "C. AWS KMS",
+      "D. AWS Artifact"
+    ],
+    "answer": "B",
+    "explanation": "AWS Secrets Manager를 사용하면 DB 암호 등을 안전하게 보관하고 주기적으로 자동 교체할 수 있습니다."
+  },
+  {
+    "question": "Redis와 호환되며 내구성이 뛰어난 인메모리 데이터베이스로, 마이크로초 대기 시간을 제공하는 서비스는?",
+    "options": [
+      "A. Amazon ElastiCache",
+      "B. Amazon MemoryDB for Redis",
+      "C. Amazon RDS for MariaDB",
+      "D. Amazon DynamoDB"
+    ],
+    "answer": "B",
+    "explanation": "MemoryDB for Redis는 빠른 성능과 다중 AZ 트랜잭션 로그를 통한 데이터 내구성을 결합한 서비스입니다."
+  }
+]

@@ -9,10 +9,10 @@ load_dotenv()
 DEFAULT_DOWNLOAD_PATH = os.path.join("tmp", "download")
 DEFAULT_UPLOAD_ITEMS = [
     ".env",
-    "config.ts",
-    "dump/",
+    "src/shared/config/index.ts",
+    "public/dump/",
     "gcp-key.json",
-    "services/",
+    "src/shared/api/",
     "unencrypted-dumps/"
 ]
 

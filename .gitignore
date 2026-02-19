@@ -1,15 +1,15 @@
 # User custom ignores
 # Ignore all files in dump directory
-dump/*
+# Ignore all files in public/dump directory
+public/dump/*
 unencrypted-dumps/*
-!dump/sample_questions.json
-!dump/MLA-C01-100Q-by-Gemini.json
+!public/dump/sample_questions.json
 !unencrypted-dumps/sample_questions.json
 
 # Ignore specific files
-config.ts
-services/dataService.tsx
-services/pdfService.tsx
+src/shared/config/index.ts
+src/shared/api/dataService.tsx
+src/shared/api/pdfService.tsx
 
 # Node.js dependencies
 node_modules/
@@ -30,14 +30,14 @@ yarn-error.log*
 pnpm-debug.log*
 
 # OS specific files
-.DS_Store
-Thumbs.db
-.env
-unencrypted-dumps/
-working/
-
-# Design files
-*.psd
-
 # Credentials
 gcp-key.json
+
+# Temporary / Backup files
+*.ex
+*.bak
+*.swp
+*.tmp
+*~
+.DS_Store
+Thumbs.db
