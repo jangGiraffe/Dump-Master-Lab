@@ -3,8 +3,9 @@ import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { HistoryRecord } from '@/shared/model/types';
 import { historyService } from '@/shared/api/historyService';
 import { examService } from '@/shared/api/examService';
+import { dataSources } from '@/shared/api/dataService';
 import { formatTime, ResultCharacter } from '@/shared/lib/utils';
-import { ChevronLeft, Trash2, Calendar, Award, Clock, BarChart2, BarChart3, BookOpen, Target, Cloud, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Trash2, Calendar, Award, Clock, BarChart2, BarChart3, BookOpen, Target, Cloud, RefreshCw } from 'lucide-react';
 
 interface HistoryProps {
     onBack: () => void;
@@ -37,25 +38,23 @@ const ExamPerformanceCard: React.FC<{
     totalSolved: number;
     passRate: number;
     attempts: number;
-    delay?: string;
-}> = ({ name, avgScore, totalSolved, passRate, attempts, delay }) => (
-    <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-4 border border-gray-100 dark:border-slate-700 hover:shadow-md transition-all animate-slideIn ${delay || ''}`}>
+}> = ({ name, avgScore, totalSolved, passRate, attempts }) => (
+    <div className="bg-gray-50 dark:bg-slate-700/30 rounded-xl p-4 border border-gray-100 dark:border-slate-700 transition-all hover:bg-white dark:hover:bg-slate-700 shadow-sm hover:shadow-md">
         <div className="flex justify-between items-start mb-3">
-            <div className="flex-1 min-w-0">
-                <h4 className="text-[13px] font-black text-gray-800 dark:text-white truncate mb-0.5" title={name}>{name}</h4>
+            <div className="flex-1 min-w-0 pr-2">
+                <h4 className="text-[12px] font-black text-gray-700 dark:text-gray-200 truncate mb-1" title={name}>{name}</h4>
                 <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tighter">{attempts}회 응시</span>
                     <span className="w-0.5 h-0.5 rounded-full bg-gray-300 dark:bg-slate-600" />
                     <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tighter">{totalSolved}문제</span>
                 </div>
             </div>
-            <div className={`text-[10px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 ${avgScore >= 72 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
-                <span className="opacity-70 text-[8px] font-bold">정답률</span>
+            <div className={`text-[10px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0 ${avgScore >= 72 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
                 {avgScore}%
             </div>
         </div>
         <div className="flex items-center justify-between gap-4">
-            <div className="flex-1 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-gray-200 dark:bg-slate-600 rounded-full overflow-hidden">
                 <div
                     className={`h-full transition-all duration-1000 ${avgScore >= 72 ? 'bg-emerald-500' : 'bg-rose-500'}`}
                     style={{ width: `${avgScore}%` }}
@@ -64,13 +63,72 @@ const ExamPerformanceCard: React.FC<{
             <div className="flex items-center gap-1 shrink-0">
                 <Target className="w-2.5 h-2.5 text-rose-500" />
                 <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">
-                    <span className="text-[8px] opacity-60 mr-0.5">합격률</span>
                     {passRate}%
                 </span>
             </div>
         </div>
     </div>
 );
+
+const ExamGroupCard: React.FC<{
+    groupName: string;
+    total: { avgScore: number; totalSolved: number; passRate: number; attempts: number; };
+    childrenStats: { name: string; avgScore: number; totalSolved: number; passRate: number; attempts: number; }[];
+    delay?: string;
+}> = ({ groupName, total, childrenStats, delay }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const hasChildren = childrenStats.length > 0;
+
+    return (
+        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden animate-slideIn transition-all ${delay || ''}`}>
+            <div
+                className={`bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/80 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 group ${hasChildren ? 'cursor-pointer hover:bg-gray-100/50 dark:hover:bg-slate-700/50 transition-colors' : ''}`}
+                onClick={() => hasChildren && setIsExpanded(!isExpanded)}
+            >
+                <div className="flex-1">
+                    <h3 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2 mb-1">
+                        <BookOpen className="w-5 h-5 text-indigo-500" />
+                        {groupName}
+                        <span className="text-[9px] bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-0.5 rounded-full uppercase tracking-widest font-bold border border-indigo-100 dark:border-indigo-800/50">Total</span>
+                    </h3>
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-slate-400">
+                        <span>{total.attempts}회 응시</span>
+                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-slate-600"></span>
+                        <span>{total.totalSolved}문제</span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-4 md:w-auto w-full justify-between md:justify-end">
+                    <div className="flex items-center gap-4 bg-white dark:bg-slate-900/50 p-2.5 md:p-3 rounded-xl border border-gray-100 dark:border-slate-700">
+                        <div className="flex flex-col items-center px-2">
+                            <span className="text-[9px] uppercase font-bold text-gray-400 dark:text-slate-500 mb-0.5">정답률</span>
+                            <span className={`text-sm md:text-base font-black ${total.avgScore >= 72 ? 'text-emerald-500' : 'text-rose-500'}`}>{total.avgScore}%</span>
+                        </div>
+                        <div className="w-px h-8 bg-gray-100 dark:bg-slate-700"></div>
+                        <div className="flex flex-col items-center px-2">
+                            <span className="text-[9px] uppercase font-bold text-gray-400 dark:text-slate-500 mb-0.5">합격률</span>
+                            <span className="text-sm md:text-base font-black text-gray-700 dark:text-gray-300">{total.passRate}%</span>
+                        </div>
+                    </div>
+                    {hasChildren && (
+                        <div className="p-2 shrink-0 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 transition-colors group-hover:bg-gray-200 dark:group-hover:bg-slate-600">
+                            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div
+                className={`transition-all duration-300 ease-in-out border-gray-100 dark:border-slate-700/50 ${isExpanded ? 'max-h-[2000px] border-t opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}
+            >
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-gray-50/50 dark:bg-slate-800/50">
+                    {childrenStats.map((child, idx) => (
+                        <ExamPerformanceCard key={idx} {...child} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const ActivityHeatmap: React.FC<{ records: HistoryRecord[] }> = ({ records }) => {
     // Generate last 12 weeks of dates
@@ -177,37 +235,76 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
         return `${seconds}초`;
     };
 
+    // Helper function to resolve examName/examCode from dataSources ids
+    const resolveExamGroupId = (recordIds: string[]): string => {
+        const matchingSources = recordIds
+            .map(id => dataSources.find(ds => ds.id === id))
+            .filter(Boolean);
+
+        if (matchingSources.length === 0) return '미분류';
+
+        // Group by examCode (or examName if examCode missing)
+        const codes = Array.from(new Set(matchingSources.map(s => s?.examCode || '미분류')));
+        return codes.join(' / ');
+    };
+
     const getExamStats = (recordList: HistoryRecord[]) => {
         const map: Record<string, {
-            totalQuestions: number;
-            correctCount: number;
-            attempts: number;
-            passCount: number;
+            groupName: string;
+            total: { totalQ: number; correctC: number; attempts: number; passC: number },
+            sub: Record<string, { totalQ: number; correctC: number; attempts: number; passC: number }>,
             lastTimestamp: number;
         }> = {};
 
         recordList.forEach(r => {
-            r.examNames.forEach(name => {
-                if (!map[name]) {
-                    map[name] = { totalQuestions: 0, correctCount: 0, attempts: 0, passCount: 0, lastTimestamp: 0 };
+            const sources = r.examNames.map(id => dataSources.find(ds => ds.id === id));
+
+            // 그룹 명칭 (examCode 로 통일)
+            const groupCode = sources.every(s => !s) ? '미분류' : Array.from(new Set(sources.filter(Boolean).map(s => s?.examCode || '미분류'))).join(' / ');
+
+            if (!map[groupCode]) {
+                map[groupCode] = { groupName: groupCode, total: { totalQ: 0, correctC: 0, attempts: 0, passC: 0 }, sub: {}, lastTimestamp: 0 };
+            }
+
+            // 그룹 전체(Total) 통계 누적
+            map[groupCode].total.totalQ += r.totalQuestions;
+            map[groupCode].total.correctC += r.correctCount;
+            map[groupCode].total.attempts += 1;
+            if (r.isPass) map[groupCode].total.passC += 1;
+            if (r.timestamp > map[groupCode].lastTimestamp) map[groupCode].lastTimestamp = r.timestamp;
+
+            // 개별 소스(subName) 통계 분리 누적
+            // 기록 안에 여러 개의 시험이 섞여 있었다고 해도, 각각의 name(예: MLA-C01-100Q) 카드로 분리해서 통계를 똑같이 더해줌
+            r.examNames.forEach(id => {
+                const sourceInfo = dataSources.find(ds => ds.id === id);
+                const subName = sourceInfo?.name || (id === 'Unknown' ? '알 수 없는 데이터' : id);
+
+                if (!map[groupCode].sub[subName]) {
+                    map[groupCode].sub[subName] = { totalQ: 0, correctC: 0, attempts: 0, passC: 0 };
                 }
-                map[name].totalQuestions += r.totalQuestions;
-                map[name].correctCount += r.correctCount;
-                map[name].attempts += 1;
-                if (r.isPass) map[name].passCount += 1;
-                if (r.timestamp > map[name].lastTimestamp) {
-                    map[name].lastTimestamp = r.timestamp;
-                }
+                map[groupCode].sub[subName].totalQ += r.totalQuestions;
+                map[groupCode].sub[subName].correctC += r.correctCount;
+                map[groupCode].sub[subName].attempts += 1;
+                if (r.isPass) map[groupCode].sub[subName].passC += 1;
             });
         });
 
-        return Object.entries(map).map(([name, stats]) => ({
-            name,
-            avgScore: stats.totalQuestions > 0 ? Math.round((stats.correctCount / stats.totalQuestions) * 100) : 0,
-            totalSolved: stats.totalQuestions,
-            passRate: stats.attempts > 0 ? Math.round((stats.passCount / stats.attempts) * 100) : 0,
-            attempts: stats.attempts,
-            lastTimestamp: stats.lastTimestamp
+        return Object.values(map).map(group => ({
+            groupName: group.groupName,
+            total: {
+                avgScore: group.total.totalQ > 0 ? Math.round((group.total.correctC / group.total.totalQ) * 100) : 0,
+                totalSolved: group.total.totalQ,
+                passRate: group.total.attempts > 0 ? Math.round((group.total.passC / group.total.attempts) * 100) : 0,
+                attempts: group.total.attempts,
+            },
+            childrenStats: Object.entries(group.sub).map(([name, stats]) => ({
+                name,
+                avgScore: stats.totalQ > 0 ? Math.round((stats.correctC / stats.totalQ) * 100) : 0,
+                totalSolved: stats.totalQ,
+                passRate: stats.attempts > 0 ? Math.round((stats.passC / stats.attempts) * 100) : 0,
+                attempts: stats.attempts,
+            })).sort((a, b) => b.attempts - a.attempts),
+            lastTimestamp: group.lastTimestamp
         })).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
     };
 
@@ -407,11 +504,11 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                     </div>
 
                                     {displayExamStats.length > 0 && (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
-                                            {displayExamStats.map((stat, idx) => (
-                                                <ExamPerformanceCard
-                                                    key={stat.name}
-                                                    {...stat}
+                                        <div className="space-y-4 animate-fadeIn">
+                                            {displayExamStats.map((group, idx) => (
+                                                <ExamGroupCard
+                                                    key={group.groupName}
+                                                    {...group}
                                                     delay={`animate-slideInStagger${(idx % 3) + 1}`}
                                                 />
                                             ))}
@@ -460,11 +557,11 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                 </div>
 
                                 {todayExamStats.length > 0 && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
-                                        {todayExamStats.map((stat, idx) => (
-                                            <ExamPerformanceCard
-                                                key={stat.name}
-                                                {...stat}
+                                    <div className="space-y-4 animate-fadeIn">
+                                        {todayExamStats.map((group, idx) => (
+                                            <ExamGroupCard
+                                                key={group.groupName}
+                                                {...group}
                                                 delay={`animate-slideInStagger${(idx % 3) + 1}`}
                                             />
                                         ))}
@@ -486,8 +583,11 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                             {todayRecords.map((record, idx) => (
                                                 <div
                                                     key={record.id}
-                                                    style={{ animationDelay: `${idx * 0.05}s` }}
-                                                    className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border-l-4 border-l-emerald-500 border border-gray-200 dark:border-slate-700 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
+                                                    style={{
+                                                        animationDelay: `${idx * 0.05}s`,
+                                                        borderLeftColor: `hsl(${Math.max(0, Math.min(100, record.score)) * 1.2}, 80%, 45%)`
+                                                    }}
+                                                    className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border-l-4 border border-gray-200 dark:border-slate-700 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
                                                 >
                                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                         <div className="flex-shrink-0">
@@ -509,8 +609,11 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                                                 </span>
                                                             </div>
                                                             <h3 className="font-semibold text-gray-800 dark:text-white text-base md:text-lg mb-1">
-                                                                {record.examNames.join(', ')}
+                                                                {resolveExamGroupId(record.examNames)}
                                                             </h3>
+                                                            <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium">
+                                                                {record.examNames.join(', ')}
+                                                            </p>
                                                         </div>
 
                                                         <div className="flex items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-lg w-full md:w-auto md:gap-8">
@@ -561,8 +664,11 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                             {previousRecords.map((record, idx) => (
                                                 <div
                                                     key={record.id}
-                                                    style={{ animationDelay: `${idx * 0.05}s` }}
-                                                    className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
+                                                    style={{
+                                                        animationDelay: `${idx * 0.05}s`,
+                                                        borderLeftColor: `hsl(${Math.max(0, Math.min(100, record.score)) * 1.2}, 80%, 45%)`
+                                                    }}
+                                                    className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border-l-4 border border-gray-200 dark:border-slate-700 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
                                                 >
                                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                         <div className="flex-shrink-0">
@@ -584,8 +690,11 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                                                 </span>
                                                             </div>
                                                             <h3 className="font-semibold text-gray-800 dark:text-white text-base md:text-lg mb-1">
-                                                                {record.examNames.join(', ')}
+                                                                {resolveExamGroupId(record.examNames)}
                                                             </h3>
+                                                            <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium">
+                                                                {record.examNames.join(', ')}
+                                                            </p>
                                                         </div>
 
                                                         <div className="flex items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-lg w-full md:w-auto md:gap-8">

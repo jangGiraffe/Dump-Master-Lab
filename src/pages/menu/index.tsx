@@ -19,32 +19,34 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
         <ThemeToggle />
       </div>
       <div className="max-w-4xl w-full">
-        <div className="flex flex-col items-center mb-10">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl md:text-3xl font-semibold text-center text-gray-900 dark:text-white">
-              Dump Master Lab
-            </h1>
-            <span className="text-[10px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full border border-gray-200 font-bold self-center">
-              v{APP_CONFIG.VERSION}
-            </span>
-          </div>
-          <p className="text-gray-500 dark:text-slate-400 text-center mt-2 text-sm md:text-base">
-            계속하려면 모드를 선택하세요
-          </p>
-
+        <div className="flex flex-col items-center mb-12 relative animate-fadeIn">
           {userTier && (
             <div className={`
-              mt-4 mb-0 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border
+              mb-6 px-4 py-1.5 rounded-full text-[13px] font-bold shadow-sm border inline-flex items-center gap-2 transition-all hover:scale-105 cursor-default
               ${userTier === 'V'
-                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/50'
                 : userTier === 'N'
-                  ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50'
                   : 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
               }
             `}>
-              {userTier === 'V' ? '👑 VIP 회원' : userTier === 'N' ? '😊 일반 회원' : '👀 체험하기 (Guest)'}
+              <span className="text-base">{userTier === 'V' ? '👑' : userTier === 'N' ? '😊' : '👀'}</span>
+              <span>{userTier === 'V' ? 'VIP 회원' : userTier === 'N' ? '일반 회원' : '체험하기 (Guest)'}</span>
             </div>
           )}
+
+          <div className="relative inline-flex items-center mb-3">
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 drop-shadow-sm text-center px-4">
+              Dump Master Lab
+            </h1>
+            <span className="absolute -right-6 top-0 md:-right-10 md:-top-2 text-[10px] md:text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800 font-bold shadow-sm transform rotate-3">
+              v{APP_CONFIG.VERSION}
+            </span>
+          </div>
+
+          <p className="text-gray-500 dark:text-slate-400 text-center font-medium md:text-lg">
+            계속하려면 모드를 선택하세요
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -135,7 +137,7 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
         </div>
 
         <div className="mt-12 space-y-8">
-          <RandomQuote className="max-w-xl mx-auto" />
+          <RandomQuote className="w-full" />
 
           <div className="text-center">
             <button
