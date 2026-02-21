@@ -171,6 +171,24 @@ export const Setup: React.FC<SetupProps> = ({
     );
   };
 
+  const handleLanguageSelect = (lang: 'KR' | 'EN' | 'ALL' | 'NONE') => {
+    if (lang === 'NONE') {
+      setSelectedVersions([]);
+      return;
+    }
+
+    const targetDatasets = lang === 'ALL'
+      ? currentDatasets
+      : currentDatasets.filter(d => d.name.includes(`(${lang})`));
+
+    const targetIds = targetDatasets.map(d => d.id);
+
+    setSelectedVersions(prev => {
+      const newSet = new Set([...prev, ...targetIds]);
+      return Array.from(newSet);
+    });
+  };
+
   const handleQuestionCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = parseInt(e.target.value) || 0;
 
@@ -325,6 +343,39 @@ export const Setup: React.FC<SetupProps> = ({
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 {isBossRaid ? '오답 문제 은행 선택' : '문제 은행 선택'} (다중 선택 가능)
               </label>
+
+              <div className="flex flex-wrap gap-2 mb-3">
+                {currentDatasets.some(ds => ds.name.includes('(KR)')) && (
+                  <button
+                    onClick={() => handleLanguageSelect('KR')}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-1.5"
+                  >
+                    <img src="https://flagcdn.com/w20/kr.png" width="16" alt="KR" className="rounded-sm" />
+                    <span>KR 전체 선택</span>
+                  </button>
+                )}
+                {currentDatasets.some(ds => ds.name.includes('(EN)')) && (
+                  <button
+                    onClick={() => handleLanguageSelect('EN')}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 border border-gray-200 dark:border-slate-600 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors flex items-center gap-1.5"
+                  >
+                    <img src="https://flagcdn.com/w20/us.png" width="16" alt="EN" className="rounded-sm" />
+                    <span>EN 전체 선택</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => handleLanguageSelect('ALL')}
+                  className="px-2.5 py-1 text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                >
+                  모두 선택
+                </button>
+                <button
+                  onClick={() => handleLanguageSelect('NONE')}
+                  className="px-2.5 py-1 text-[10px] font-bold bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+                >
+                  모두 해제
+                </button>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[...currentDatasets]
                   .sort((a, b) => {
@@ -359,13 +410,13 @@ export const Setup: React.FC<SetupProps> = ({
                       >
                         <div className="flex items-center text-sm">
                           {lang === 'KR' && (
-                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                              KR
+                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1.5">
+                              <img src="https://flagcdn.com/w20/kr.png" width="14" alt="KR" className="rounded-sm" /> KR
                             </span>
                           )}
                           {lang === 'EN' && (
-                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 border border-gray-200 dark:border-slate-600">
-                              EN
+                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 border border-gray-200 dark:border-slate-600 flex items-center gap-1.5">
+                              <img src="https://flagcdn.com/w20/us.png" width="14" alt="EN" className="rounded-sm" /> EN
                             </span>
                           )}
                           <span className="font-medium text-gray-700 dark:text-slate-300">{displayName}</span>

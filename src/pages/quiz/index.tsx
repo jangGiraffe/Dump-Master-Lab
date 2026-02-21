@@ -205,11 +205,15 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   // Empty/Error Question Auto-Answer Logic
   useEffect(() => {
     const currentQ = questions[currentIdx];
-    if (!currentQ.options || currentQ.options.length === 0) {
-      if (answers[currentQ.id] !== currentQ.answer) {
+    const hasNoOptions = !currentQ.options || currentQ.options.length === 0;
+    const hasNoAnswer = !currentQ.answer || currentQ.answer.trim() === '';
+
+    if (hasNoOptions || hasNoAnswer) {
+      const autoValue = currentQ.answer || "";
+      if (answers[currentQ.id] !== autoValue) {
         setAnswers(prev => ({
           ...prev,
-          [currentQ.id]: currentQ.answer
+          [currentQ.id]: autoValue
         }));
       }
     }
@@ -412,7 +416,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
   const currentQ = questions[currentIdx];
   const selectedAnswer = answers[currentQ.id];
-  const isErrorQuestion = !currentQ.options || currentQ.options.length === 0;
+  const isErrorQuestion = !currentQ.options || currentQ.options.length === 0 || !currentQ.answer || currentQ.answer.trim() === '';
 
   // Render Component
   return (
@@ -568,7 +572,12 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
               <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center mb-8">
                 <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-2" />
                 <h3 className="text-lg font-semibold text-red-700">오류 문제</h3>
-                <p className="text-red-600 mt-1">선택지 데이터가 없습니다. 자동으로 정답 처리됩니다.</p>
+                <p className="text-red-600 mt-1">
+                  {!currentQ.answer || currentQ.answer.trim() === ''
+                    ? "정답 데이터가 없거나 잘못되었습니다."
+                    : "선택지 데이터가 없습니다."
+                  } 자동으로 정답 처리됩니다.
+                </p>
               </div>
             ) : (
               <div className="space-y-3 mb-8">

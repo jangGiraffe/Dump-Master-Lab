@@ -4,7 +4,7 @@ import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Question } from '@/shared/model/types';
 import { historyService } from '@/shared/api/historyService';
 import { formatTime, ResultCharacter } from '@/shared/lib/utils';
-import { Share2, RotateCcw, Home, Download, CheckCircle, XCircle, ChevronDown, ChevronUp, Clock, Zap, Target, Swords, Bot, Copy } from 'lucide-react';
+import { Share2, RotateCcw, Home, Download, CheckCircle, XCircle, ChevronDown, ChevronUp, Clock, Zap, Target, Swords, Bot, Copy, AlertTriangle } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { RandomQuote } from '@/shared/ui/RandomQuote';
 
@@ -258,7 +258,15 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
                   </div>
                   <div className="flex-grow">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-medium text-gray-800 dark:text-white pr-4 text-sm">문제 {idx + 1}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-gray-800 dark:text-white text-sm">문제 {idx + 1}</h4>
+                        {(!q.options || q.options.length === 0 || !q.answer || q.answer.trim() === '') && (
+                          <span className="inline-flex items-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            오류
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-2 py-1 rounded">
                         {q.sourceVersion}
                       </span>
@@ -273,6 +281,18 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
                 {isExpanded && (
                   <div className="p-4 border-t dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50">
                     <p className="whitespace-pre-wrap text-gray-800 dark:text-slate-200 mb-4 font-medium text-sm md:text-base">{q.question}</p>
+
+                    {(!q.options || q.options.length === 0 || !q.answer || q.answer.trim() === '') && (
+                      <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-3 rounded-lg mb-4 text-xs md:text-sm text-red-700 dark:text-red-400 flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                        <p>
+                          {(!q.answer || q.answer.trim() === '')
+                            ? "정답 데이터가 없거나 잘못되었습니다."
+                            : "선택지 데이터가 없습니다."
+                          } 시스템에 의해 자동으로 정답 처리되었습니다.
+                        </p>
+                      </div>
+                    )}
 
                     <div className="space-y-2 mb-4">
                       {q.options.map((opt, i) => {
