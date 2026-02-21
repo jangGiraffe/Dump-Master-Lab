@@ -39,6 +39,7 @@ gcp-key.json
 *.bak
 *.swp
 *.tmp
+tmp/
 *~
 .DS_Store
 Thumbs.db

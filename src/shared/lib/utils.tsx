@@ -147,8 +147,20 @@ export const formatTime = (seconds: number): string => {
 // Helper to assign IDs and source to raw data
 export const processRawQuestions = (rawData: any[], versionName: string, originalData?: any[]): Question[] => {
   return rawData.map((q, idx) => {
+    let rawAnswer = q.answer || '';
+    if (Array.isArray(rawAnswer)) {
+      rawAnswer = rawAnswer.join('');
+    }
+    const normalizedAnswer = String(rawAnswer)
+      .replace(/[\s,]+/g, '')
+      .split('')
+      .sort()
+      .join('')
+      .toUpperCase();
+
     const processedQ: Question = {
       ...q,
+      answer: normalizedAnswer,
       // Keep real newlines and support literal \n strings if they exist
       question: q.question ? q.question.replace(/\\n/g, '\n') : '',
       explanation: q.explanation ? q.explanation.replace(/\\n/g, '\n') : '',

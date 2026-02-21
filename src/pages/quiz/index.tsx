@@ -69,6 +69,22 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     return () => clearInterval(timer);
   }, [showTutorial, isPaused]);
 
+  // Prevent accidental refresh or closing
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // 시험이 완료된 상태면 경고 없이 바로 종료
+      if (isFinishedRef.current) return;
+
+      e.preventDefault();
+      // 브라우저 호환성을 위해 returnValue 명시
+      e.returnValue = '';
+      return '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   // Watch for time running out
   useEffect(() => {
     if (timeLeft === 0 && !isFinishedRef.current && !showTutorial) {
@@ -155,6 +171,14 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
   // Navigation Handlers
   const handleNext = useCallback(() => {
+    const currentQ = questions[currentIdx];
+    const currentAnswer = answers[currentQ.id] || "";
+
+    if (currentQ.answer.length > 1 && currentAnswer.length !== currentQ.answer.length) {
+      alert(`복수 선택 문제입니다!\n총 ${currentQ.answer.length}개의 정답을 선택해주세요. (현재 ${currentAnswer.length}개 선택됨)`);
+      return;
+    }
+
     if (currentIdx < questions.length - 1) {
       setCurrentIdx(prev => prev + 1);
       setShowExplanation(false);
@@ -165,7 +189,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     } else {
       handleFinish();
     }
-  }, [currentIdx, questions.length, handleFinish]);
+  }, [currentIdx, questions, answers, handleFinish]);
 
   const handlePrev = useCallback(() => {
     if (currentIdx > 0) {
