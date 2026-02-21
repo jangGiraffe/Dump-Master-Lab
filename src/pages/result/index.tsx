@@ -6,6 +6,7 @@ import { historyService } from '@/shared/api/historyService';
 import { formatTime, ResultCharacter } from '@/shared/lib/utils';
 import { Share2, RotateCcw, Home, Download, CheckCircle, XCircle, ChevronDown, ChevronUp, Clock, Zap, Target, Swords, Bot, Copy } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { RandomQuote } from '@/shared/ui/RandomQuote';
 
 interface ResultProps {
   questions: Question[];
@@ -148,6 +149,8 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
             </button>
           </div>
         </div>
+
+        <RandomQuote />
 
         {/* Retry Wrong Section (Modified from AI Insight) */}
         {wrongQuestions.length > 0 && (

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Question } from '@/shared/model/types';
 import { formatTime } from '@/shared/lib/utils';
-import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown } from 'lucide-react';
+import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown, Pause, Play } from 'lucide-react';
 import { QuizTutorial } from './ui/QuizTutorial';
+import { RandomQuote } from '@/shared/ui/RandomQuote';
 
 interface QuizProps {
   questions: Question[];
@@ -20,6 +21,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const [showTutorial, setShowTutorial] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Use ref to track if quiz is finished to prevent multiple submissions
   const isFinishedRef = useRef(false);
@@ -50,7 +52,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
   // Timer Effect - Separate from handleFinish to avoid stale closures
   useEffect(() => {
-    if (showTutorial) return;
+    if (showTutorial || isPaused) return;
     if (isFinishedRef.current) return;
 
     const timer = setInterval(() => {
@@ -64,7 +66,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [showTutorial]);
+  }, [showTutorial, isPaused]);
 
   // Watch for time running out
   useEffect(() => {
@@ -190,7 +192,18 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
   // Keyboard Shortcuts
   useEffect(() => {
-    if (showTutorial) return;
+    if (showTutorial || isPaused) {
+      if (isPaused) {
+        const handlePauseKeyDown = (e: KeyboardEvent) => {
+          if (e.key.toUpperCase() === 'P') {
+            setIsPaused(false);
+          }
+        };
+        window.addEventListener('keydown', handlePauseKeyDown);
+        return () => window.removeEventListener('keydown', handlePauseKeyDown);
+      }
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toUpperCase();
@@ -222,6 +235,11 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       // View Original (O or 0)
       else if ((key === 'O' || key === '0') && currentQ.originalQuestion) {
         setShowOriginal(prev => !prev);
+      }
+
+      // Pause (P)
+      else if (key === 'P') {
+        setIsPaused(true);
       }
 
       // Answer Selection (1-6)
@@ -433,11 +451,22 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
             />
           </div>
         )}
+
         <div className="flex items-center space-x-4">
           <div className={`flex items-center font-mono font-medium text-lg ${timeLeft < 300 ? 'text-danger animate-pulse' : 'text-gray-700 dark:text-slate-200'}`}>
             <Clock className="w-5 h-5 mr-2" />
             {formatTime(timeLeft)}
           </div>
+          <button
+            onClick={() => setIsPaused(true)}
+            className="p-2 text-gray-500 hover:text-primary transition-colors hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full relative group"
+            title="일시중지 (P)"
+          >
+            <Pause className="w-5 h-5" />
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              일시중지 (P)
+            </span>
+          </button>
           <div className="hidden sm:block text-sm text-gray-500 dark:text-slate-400">
             문제 {currentIdx + 1} / {questions.length}
           </div>
@@ -647,6 +676,34 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
           </button>
         </div>
       </footer>
+
+      {/* Pause Overlay */}
+      {isPaused && (
+        <div className="fixed inset-0 z-[100] bg-gray-50/95 dark:bg-slate-900/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-sm w-full animate-scaleIn">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Pause className="w-10 h-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 font-outfit">시험 일시 중지</h2>
+            <p className="text-gray-500 dark:text-slate-400 mb-8">시험이 일시 중지되었습니다.<br />준비가 되면 아래 버튼을 눌러 재개하세요.</p>
+
+            <button
+              onClick={() => setIsPaused(false)}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-primary/20 flex items-center justify-center group"
+            >
+              <Play className="w-5 h-5 mr-2 fill-current" />
+              <span>시험 재개하기</span>
+            </button>
+
+            <div className="mt-6 flex items-center justify-center space-x-2 text-xs text-gray-400 dark:text-slate-500 font-mono mb-6">
+              <span className="bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-600 font-bold">P</span>
+              <span>키를 눌러도 재개됩니다</span>
+            </div>
+
+            <RandomQuote className="text-left bg-transparent border-none p-0 !shadow-none" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

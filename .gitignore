@@ -1,4 +1,5 @@
 # User custom ignores
+working/
 # Ignore all files in dump directory
 # Ignore all files in public/dump directory
 public/dump/*

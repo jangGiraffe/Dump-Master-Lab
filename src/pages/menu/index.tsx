@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, PenTool, LogOut, BarChart2, Swords } from 'lucide-react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
+import { RandomQuote } from '@/shared/ui/RandomQuote';
 
 import { APP_CONFIG } from '@/shared/config';
 import { UserTier } from '@/shared/model/types';
@@ -133,14 +134,18 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
           </div>
         </div>
 
-        <div className="mt-12 text-center">
-          <button
-            onClick={onLogout}
-            className="text-gray-400 hover:text-gray-600 flex items-center justify-center mx-auto text-xs font-medium transition-colors"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            로그아웃
-          </button>
+        <div className="mt-12 space-y-8">
+          <RandomQuote className="max-w-xl mx-auto" />
+
+          <div className="text-center">
+            <button
+              onClick={onLogout}
+              className="text-gray-400 hover:text-gray-600 flex items-center justify-center mx-auto text-xs font-medium transition-colors"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              로그아웃
+            </button>
+          </div>
         </div>
       </div>
     </div>
