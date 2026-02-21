@@ -11,9 +11,10 @@ interface QuizProps {
   timeLimitMinutes: number;
   onComplete: (userAnswers: Record<string, string>, timeLeft: number) => void;
   wrongCountMap?: Record<string, number>;
+  examCodes?: string[];
 }
 
-export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onComplete, wrongCountMap = {} }) => {
+export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onComplete, wrongCountMap = {}, examCodes = [] }) => {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(timeLimitMinutes * 60);
@@ -470,6 +471,17 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
           <div className="hidden sm:block text-sm text-gray-500 dark:text-slate-400">
             문제 {currentIdx + 1} / {questions.length}
           </div>
+        </div>
+
+        {/* Centered Exam Code */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
+          {examCodes.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <span className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase border border-primary/20 dark:border-primary/40 shadow-sm animate-fadeIn">
+                {examCodes.join(' & ')}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center">

@@ -471,6 +471,11 @@ const App: React.FC = () => {
             questions={quizQuestions}
             timeLimitMinutes={config.timeLimitMinutes}
             onComplete={handleQuizComplete}
+            examCodes={datasets
+              .filter(d => config.selectedVersions.includes(d.id))
+              .map(d => d.examCode || 'Uncategorized')
+              .filter((v, i, a) => a.indexOf(v) === i)
+            }
             wrongCountMap={(() => {
               const records = historyService.getLocalRecords();
               const map: Record<string, number> = {};

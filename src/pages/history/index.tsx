@@ -114,9 +114,18 @@ const ActivityHeatmap: React.FC<{ records: HistoryRecord[] }> = ({ records }) =>
                 {heatmapDays.map((day, idx) => (
                     <div
                         key={idx}
-                        className={`w-3.5 h-3.5 rounded-[2px] ${getColor(day.count)} transition-all hover:ring-2 hover:ring-emerald-300 cursor-help`}
-                        title={`${day.date}: ${day.count}개 완료`}
-                    />
+                        className={`relative group w-3.5 h-3.5 rounded-[2px] ${getColor(day.count)} transition-all hover:ring-2 hover:ring-emerald-300 cursor-help`}
+                    >
+                        {/* Custom Tooltip */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 pointer-events-none z-50 w-max">
+                            <div className="bg-gray-900/95 dark:bg-slate-800/95 backdrop-blur-sm text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-xl border border-gray-700/50 dark:border-slate-600/50 flex flex-col items-center gap-0.5">
+                                <span className="text-gray-400 font-medium">{day.date}</span>
+                                <span className="font-bold text-emerald-400 text-xs">{day.count}문제 해결</span>
+                            </div>
+                            {/* Arrow */}
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px border-4 border-transparent border-t-gray-900/95 dark:border-t-slate-800/95"></div>
+                        </div>
+                    </div>
                 ))}
             </div>
             <div className="mt-4 flex items-center justify-end gap-2">
