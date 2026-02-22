@@ -4,46 +4,46 @@ import { APP_CONFIG } from '@/shared/config';
 import resultSpriteUrl from '@/shared/assets/result16_new.png';
 
 // 점수(0~100)에 따른 16단계 이미지 인덱스 (0=최고, 15=최저)
-// Row 0: 100, 99-95, 94-90, 89-85
-// Row 1: 84-80, 79-77, 76-74, 73-72
-// Row 2: 71-68, 67-60, 59-50, 49-40
-// Row 3: 39-30, 29-20, 19-10, 9-0
+// Row 0: 100, 99-95, 94-90, 89-84
+// Row 1: 83-78, 77-72, 71-64, 63-56
+// Row 2: 55-48, 47-40, 39-32, 31-24
+// Row 3: 23-16, 15-8, 7-1, 0
 export const getResultImageIndex = (score: number): number => {
   if (score === 100) return 0;
   if (score >= 95) return 1;
   if (score >= 90) return 2;
-  if (score >= 85) return 3;
-  if (score >= 80) return 4;
-  if (score >= 77) return 5;
-  if (score >= 74) return 6;
-  if (score >= 72) return 7;
-  if (score >= 68) return 8;
-  if (score >= 60) return 9;
-  if (score >= 50) return 10;
-  if (score >= 40) return 11;
-  if (score >= 30) return 12;
-  if (score >= 20) return 13;
-  if (score >= 10) return 14;
+  if (score >= 84) return 3;
+  if (score >= 78) return 4;
+  if (score >= 72) return 5; // 72점 이상 턱걸이 합격
+  if (score >= 64) return 6;
+  if (score >= 56) return 7;
+  if (score >= 48) return 8;
+  if (score >= 40) return 9;
+  if (score >= 32) return 10;
+  if (score >= 24) return 11;
+  if (score >= 16) return 12;
+  if (score >= 8) return 13;
+  if (score >= 1) return 14;
   return 15;
 };
 
 const RESULT_MESSAGES = [
-  '완벽한 점수! 놀라워요!',
-  '만점! 당신은 천재!',
-  '최고 기록! 멋진데!',
-  '합격! 잘했어!',
-  '잘했어! 계속해봐!',
-  '훌륭해! 아주 좋았어!',
-  '통과! 다음 단계로!',
-  '나쁘지 않아! 좀 더 노력해!',
-  '합격! 괜찮았어!',
-  '잘했어! 실력 좋은데!',
-  '좀 더 공부해야겠어.',
-  '아쉽다! 다시 해봐.',
-  '거의 다 왔어! 힘내!',
-  '노력이 더 필요해.',
-  '다시 도전! 포기하지 마!',
-  '에픽 실패! 으악!',
+  '만점! 당신은 천재!',     // 0
+  '완벽한 점수! 놀라워요!',      // 1
+  '합격! 정말 잘하셨어요!',      // 2
+  '최고 기록! 멋진데!',    // 3
+  '합격! 계속 정진하세요!',    // 4
+  '통과! 턱걸이 합격입니다!',    // 5
+  '아쉬워요! 조금만 더 하면 합격!', // 6
+  '나쁘지 않아요! 다시 도전!',   // 7
+  '조금 더 노력이 필요해요.',    // 8
+  '힘내세요! 다시 도전해볼까요?',  // 9
+  '좀 더 공부해야겠어.',      // 10
+  '아쉽다! 다시 해봐.',      // 11
+  '거의 다 왔어! 힘내!',      // 12
+  '노력이 더 필요해.',       // 13
+  '다시 도전! 포기하지 마!',    // 14
+  '에픽 실패! 으악!',       // 15
 ];
 
 // score: 0~100 점수, size: 이미지 크기(px)
