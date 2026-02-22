@@ -2,6 +2,7 @@ import React from 'react';
 import { BookOpen, PenTool, LogOut, BarChart2, Swords } from 'lucide-react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { RandomQuote } from '@/shared/ui/RandomQuote';
+import { DDayCounter } from '@/shared/ui/DDayCounter';
 
 import { APP_CONFIG } from '@/shared/config';
 import { UserTier } from '@/shared/model/types';
@@ -10,9 +11,10 @@ interface MenuProps {
   onSelectMode: (mode: 'quiz' | 'study' | 'history' | 'boss-raid') => void;
   onLogout: () => void;
   userTier: UserTier | null;
+  userId: string;
 }
 
-export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) => {
+export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier, userId }) => {
   return (
     <div className="flex-grow bg-gray-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6 transition-colors duration-300">
       <div className="absolute top-4 right-4">
@@ -136,7 +138,8 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier }) 
           </div>
         </div>
 
-        <div className="mt-12 space-y-8">
+        <div className="mt-12 space-y-6">
+          <DDayCounter userId={userId} />
           <RandomQuote className="w-full" />
 
           <div className="text-center">

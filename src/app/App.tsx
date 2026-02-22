@@ -444,7 +444,7 @@ const App: React.FC = () => {
         {stage === AppStage.LOGIN && <Login onLogin={handleLogin} />}
 
         {stage === AppStage.MENU && (
-          <Menu onSelectMode={handleMenuSelect} onLogout={handleLogout} userTier={userTier} />
+          <Menu onSelectMode={handleMenuSelect} onLogout={handleLogout} userTier={userTier} userId={userHash} />
         )}
 
         {stage === AppStage.STUDY && (

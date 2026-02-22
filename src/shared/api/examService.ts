@@ -1,3 +1,5 @@
+import { db } from './firebase';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 export interface ExamInfo {
     code: string;
@@ -6,6 +8,13 @@ export interface ExamInfo {
     category: string;
     officialTimeLimitMinutes?: number;
     officialQuestionCount?: number;
+}
+
+// Data for D-Day configuration
+export interface UserExamConfig {
+    date: string; // YYYY-MM-DD
+    time: string; // HH:mm
+    code: string;
 }
 
 export const examsInfo: Record<string, ExamInfo> = {
@@ -59,6 +68,11 @@ export const examsInfo: Record<string, ExamInfo> = {
     }
 };
 
+const STORAGE_MODE = import.meta.env.VITE_STORAGE_MODE || 'LOCAL';
+const LOCAL_EXAM_CONFIG_KEY = 'dump_master_exam_info';
+const LOCAL_EXAM_CACHE_TS_KEY = 'dump_master_exam_cache_ts';
+const CACHE_TTL = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+
 class ExamService {
     getAllExams(): ExamInfo[] {
         return Object.values(examsInfo);
@@ -74,6 +88,83 @@ class ExamService {
 
     getExamDescription(code: string): string {
         return examsInfo[code]?.description || '';
+    }
+
+    // --- D-Day Configuration Methods ---
+
+    async saveUserExamConfig(userId: string, config: UserExamConfig) {
+        const timestamp = Date.now();
+        // 1. Always Save to Local Storage and Update Cache TS
+        localStorage.setItem(LOCAL_EXAM_CONFIG_KEY, JSON.stringify(config));
+        localStorage.setItem(LOCAL_EXAM_CACHE_TS_KEY, timestamp.toString());
+
+        // 2. Save to Cloud if enabled and not guest
+        if (STORAGE_MODE === 'CLOUD' && userId && userId !== 'guest' && !userId.startsWith('guest_')) {
+            try {
+                await setDoc(doc(db, 'examConfigs', userId), {
+                    ...config,
+                    updatedAt: timestamp
+                });
+            } catch (e) {
+                console.error("Error saving exam config to Firestore:", e);
+            }
+        }
+    }
+
+    async getUserExamConfig(userId: string): Promise<UserExamConfig | null> {
+        const now = Date.now();
+
+        // 1. Check Local Storage first
+        const localData = localStorage.getItem(LOCAL_EXAM_CONFIG_KEY);
+        const cacheTs = localStorage.getItem(LOCAL_EXAM_CACHE_TS_KEY);
+        const localConfig = localData ? JSON.parse(localData) as UserExamConfig : null;
+
+        // 2. If Cloud mode, check cache validity (3 hours)
+        if (STORAGE_MODE === 'CLOUD' && userId && userId !== 'guest' && !userId.startsWith('guest_')) {
+            const isCacheExpired = !cacheTs || (now - parseInt(cacheTs)) > CACHE_TTL;
+
+            // If cache is expired or missing, fetch from Cloud
+            if (isCacheExpired) {
+                try {
+                    console.log(`[ExamService] Cache expired or missing, fetching from Cloud...`);
+                    const docSnap = await getDoc(doc(db, 'examConfigs', userId));
+                    if (docSnap.exists()) {
+                        const cloudConfig = docSnap.data() as UserExamConfig;
+                        // Sync local storage and update timestamp
+                        localStorage.setItem(LOCAL_EXAM_CONFIG_KEY, JSON.stringify(cloudConfig));
+                        localStorage.setItem(LOCAL_EXAM_CACHE_TS_KEY, now.toString());
+                        return cloudConfig;
+                    } else {
+                        // If no cloud data, clear local just in case to be consistent
+                        if (localConfig) {
+                            localStorage.removeItem(LOCAL_EXAM_CONFIG_KEY);
+                            localStorage.removeItem(LOCAL_EXAM_CACHE_TS_KEY);
+                        }
+                        return null;
+                    }
+                } catch (e) {
+                    console.error("Error fetching exam config from Firestore:", e);
+                    // On error, fallback to local even if expired
+                    return localConfig;
+                }
+            } else {
+                console.log(`[ExamService] Using valid local cache (Age: ${Math.round((now - parseInt(cacheTs)) / 60000)}m)`);
+            }
+        }
+
+        return localConfig;
+    }
+
+    async deleteUserExamConfig(userId: string) {
+        localStorage.removeItem(LOCAL_EXAM_CONFIG_KEY);
+        localStorage.removeItem(LOCAL_EXAM_CACHE_TS_KEY);
+        if (STORAGE_MODE === 'CLOUD' && userId && userId !== 'guest' && !userId.startsWith('guest_')) {
+            try {
+                await deleteDoc(doc(db, 'examConfigs', userId));
+            } catch (e) {
+                console.error("Error deleting exam config from Firestore:", e);
+            }
+        }
     }
 }
 
