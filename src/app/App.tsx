@@ -361,28 +361,36 @@ const App: React.FC = () => {
     setStage(AppStage.QUIZ);
   };
 
-  const handleQuizComplete = (answers: Record<string, string>, timeLeft: number) => {
+  const handleQuizComplete = (answers: Record<string, string>, timeLeft: number, limitCount?: number) => {
     setUserAnswers(answers);
 
     if (config) {
-      const wrongCount = quizQuestions.filter(q => answers[q.id] !== q.answer).length;
-      const wrongQuestions = quizQuestions.filter(q => answers[q.id] !== q.answer);
-      const correctCount = quizQuestions.length - wrongCount;
-      const score = Math.round((correctCount / quizQuestions.length) * 100);
+      // If limitCount is provided, treat the exam as having only that many questions
+      const finalQuestions = limitCount ? quizQuestions.slice(0, limitCount) : quizQuestions;
+
+      const wrongCount = finalQuestions.filter(q => answers[q.id] !== q.answer).length;
+      const wrongQuestions = finalQuestions.filter(q => answers[q.id] !== q.answer);
+      const correctCount = finalQuestions.length - wrongCount;
+      const score = Math.round((correctCount / finalQuestions.length) * 100);
       const isPass = score >= 72;
       const timeTakenSeconds = (config.timeLimitMinutes * 60) - timeLeft;
       setTimeTaken(timeTakenSeconds);
 
       historyService.saveRecord({
-        totalQuestions: quizQuestions.length,
+        totalQuestions: finalQuestions.length,
         correctCount,
         score,
         isPass,
         timeTakenSeconds,
-        examNames: Array.from(new Set(quizQuestions.map(q => q.sourceVersion || 'Unknown'))),
+        examNames: Array.from(new Set(finalQuestions.map(q => q.sourceVersion || 'Unknown'))),
         isRetry,
         wrongQuestionIds: wrongQuestions.map(q => q.id)
       }, userHash);
+
+      // We might want to update the displayed list of questions for the result page too
+      if (limitCount) {
+        setQuizQuestions(finalQuestions);
+      }
     }
 
     setStage(AppStage.RESULT);

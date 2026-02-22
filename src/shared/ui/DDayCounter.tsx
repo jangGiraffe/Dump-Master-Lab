@@ -1,22 +1,36 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Edit3, X, Clock, Target, Trash2 } from 'lucide-react';
+import { Calendar, Edit3, X, Clock, Target, Trash2, Loader2 } from 'lucide-react';
 import { examService, UserExamConfig } from '@/shared/api/examService';
+import { UserTier } from '@/shared/model/types';
 
 interface DDayCounterProps {
     userId: string;
+    userTier: UserTier | null;
     className?: string;
 }
 
-export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, className = '' }) => {
+export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, userTier, className = '' }) => {
     const [examInfo, setExamInfo] = useState<UserExamConfig | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [tempInfo, setTempInfo] = useState<UserExamConfig>({ date: '', time: '09:00', code: '' });
     const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; mins: number; secs: number } | null>(null);
     const [loading, setLoading] = useState(true);
+    const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+    const showToast = (msg: string) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(null), 3000);
+    };
 
     // Load Initial Data
     useEffect(() => {
         const loadConfig = async () => {
+            // Guest users should not load/see D-Day info even if it exists locally
+            if (userTier === 'G' || !userId) {
+                setLoading(false);
+                return;
+            }
+
             setLoading(true);
             const config = await examService.getUserExamConfig(userId);
             if (config) {
@@ -26,7 +40,7 @@ export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, className = ''
             setLoading(false);
         };
         loadConfig();
-    }, [userId]);
+    }, [userId, userTier]);
 
     const calculateTimeLeft = useCallback(() => {
         if (!examInfo || !examInfo.date) return null;
@@ -61,12 +75,19 @@ export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, className = ''
     }, [examInfo, calculateTimeLeft]);
 
     const handleSave = async () => {
+        if (userTier === 'G') {
+            showToast('체험하기 모드에서는 일정을 등록할 수 없습니다.');
+            setIsEditing(false);
+            return;
+        }
+
         if (tempInfo.date && tempInfo.code) {
             await examService.saveUserExamConfig(userId, tempInfo);
             setExamInfo(tempInfo);
             setIsEditing(false);
+            showToast('시험 일정이 성공적으로 저장되었습니다!');
         } else {
-            alert('시험 코드와 날짜를 모두 입력해주세요!');
+            showToast('시험 코드와 날짜를 모두 입력해주세요.');
         }
     };
 
@@ -76,10 +97,49 @@ export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, className = ''
             setExamInfo(null);
             setTempInfo({ date: '', time: '09:00', code: '' });
             setIsEditing(false);
+            showToast('일정이 삭제되었습니다.');
         }
     };
 
-    if (loading) return null;
+    if (loading) {
+        return (
+            <div className={`relative w-full bg-slate-900/40 py-4 md:py-5 px-6 md:px-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 overflow-hidden ${className}`}>
+                {/* Blurred Content Proxy */}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 blur-md opacity-20 pointer-events-none select-none">
+                    <div className="flex items-center gap-4 shrink-0">
+                        <div className="w-10 h-10 bg-white/20 rounded-xl" />
+                        <div className="space-y-1.5">
+                            <div className="h-4 w-32 bg-white/20 rounded" />
+                            <div className="h-2 w-20 bg-white/10 rounded" />
+                        </div>
+                    </div>
+                    <div className="flex-grow max-w-sm w-full">
+                        <div className="grid grid-cols-4 gap-2 md:gap-3">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="flex flex-col items-center gap-1.5">
+                                    <div className="w-full aspect-square bg-white/10 rounded-xl" />
+                                    <div className="h-2 w-full bg-white/5 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Loading Spinner Overaly */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full" />
+                            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin relative z-10" />
+                        </div>
+                        <span className="text-[10px] font-black text-indigo-400/60 uppercase tracking-[0.2em] animate-pulse">
+                            Loading Config
+                        </span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (isEditing) {
         return (
@@ -159,91 +219,112 @@ export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, className = ''
 
     // Dark background for both modes but slightly adjusted colors for consistent premium feel
     return (
-        <div
-            onClick={() => {
-                setTempInfo(examInfo || { date: '', time: '09:00', code: '' });
-                setIsEditing(true);
-            }}
-            className={`group bg-gradient-to-br from-indigo-900 to-slate-900 dark:from-slate-800 dark:to-slate-950 p-6 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer relative overflow-hidden ${className}`}
-        >
-            {/* Background patterns */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-teal-500/10 rounded-full blur-2xl -ml-12 -mb-12" />
-
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner group-hover:bg-white transition-all">
-                        <Calendar className="w-7 h-7 text-white group-hover:text-indigo-600 transition-colors" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="px-2.5 py-0.5 bg-indigo-500/30 text-indigo-100 text-[10px] font-black uppercase tracking-widest rounded-full border border-indigo-400/30">
-                                Target Exam
-                            </span>
-                            {examInfo && (
-                                <span className="text-white/60 text-[10px] font-medium font-mono">
-                                    {examInfo.date} {examInfo.time}
-                                </span>
-                            )}
-                        </div>
-                        <h3 className="text-xl font-black text-white leading-tight">
-                            {examInfo ? examInfo.code : '시험 일정을 등록하세요'}
-                        </h3>
-                    </div>
-                </div>
-
-                {examInfo && (
-                    <div className="flex items-center">
-                        {timeLeft ? (
-                            <div className="flex gap-3">
-                                {[
-                                    { label: 'Days', value: timeLeft.days },
-                                    { label: 'Hrs', value: timeLeft.hours },
-                                    { label: 'Min', value: timeLeft.mins },
-                                    { label: 'Sec', value: timeLeft.secs },
-                                ].map((item, i) => (
-                                    <div key={i} className="flex flex-col items-center">
-                                        <div className="w-12 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/10 flex items-center justify-center">
-                                            <span className="text-xl font-black text-white font-mono tabular-nums leading-none">
-                                                {String(item.value).padStart(2, '0')}
-                                            </span>
-                                        </div>
-                                        <span className="text-[9px] font-bold text-indigo-300 mt-1 uppercase tracking-tighter opacity-80">
-                                            {item.label}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="px-6 py-2 bg-emerald-500/20 rounded-2xl border border-emerald-400/30">
-                                <span className="text-emerald-300 font-black text-sm uppercase tracking-widest">
-                                    Exam Started / Completed!
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {!examInfo && (
-                    <div className="flex items-center gap-2 text-white/40 font-bold text-sm">
-                        <Edit3 className="w-4 h-4" />
-                        <span>Click to set schedule</span>
-                    </div>
-                )}
-            </div>
-
-            {examInfo && (
-                <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                        <span className="text-xs text-white/40 font-medium">Cloud Sync Protected</span>
-                    </div>
-                    <div className="text-[10px] text-indigo-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                        <Edit3 className="w-3 h-3" />
-                        SCHEDULE EDIT
+        <div className="relative">
+            {/* Toast Notification Layer */}
+            {toastMsg && (
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-[100] animate-slideUp">
+                    <div className="bg-indigo-600/90 backdrop-blur-md text-white px-5 py-2 rounded-full text-xs font-bold shadow-2xl border border-white/20 whitespace-nowrap">
+                        {toastMsg}
                     </div>
                 </div>
             )}
+
+            <div
+                onClick={() => {
+                    if (userTier === 'G') {
+                        showToast('체험하기 모드에서는 등록할 수 없습니다.');
+                        return;
+                    }
+                    setTempInfo(examInfo || { date: '', time: '09:00', code: '' });
+                    setIsEditing(true);
+                }}
+                className={`group bg-gradient-to-br from-indigo-600/90 via-slate-900 to-black dark:from-indigo-950/50 dark:via-slate-900/80 dark:to-black py-5 md:py-6 px-6 md:px-8 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:shadow-indigo-500/20 hover:-translate-y-1 transition-all duration-700 cursor-pointer relative overflow-hidden border border-white/10 backdrop-blur-md animate-fadeIn ${className}`}
+            >
+                {/* dynamic background lighting */}
+                <div className="absolute -top-10 -right-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] group-hover:bg-indigo-500/20 transition-all duration-1000" />
+
+                {/* Subtle gloss effect over the card */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+                <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6 md:gap-8">
+                    {/* Left Side: Header & Info */}
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <div className="w-12 h-12 md:w-13 md:h-13 bg-white/10 backdrop-blur-2xl rounded-2xl flex items-center justify-center border border-white/20 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shrink-0">
+                            <Calendar className="w-6 h-6 text-indigo-300" />
+                        </div>
+
+                        <div className="flex flex-col items-start gap-1.5 min-w-0">
+                            <h3 className="text-xl md:text-2xl font-black text-white tracking-tight drop-shadow-sm leading-tight truncate w-full">
+                                {examInfo ? examInfo.code : '시험 일정을 등록하세요'}
+                            </h3>
+
+                            {examInfo && (
+                                <div className="flex items-center gap-2 text-indigo-300/60 text-xs md:text-sm font-bold tracking-tight">
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-white/5 rounded-md border border-white/10">
+                                        <Clock className="w-3 h-3 text-indigo-400" />
+                                        <span>{examInfo.date.replace(/-/g, '.')}</span>
+                                    </div>
+                                    <span className="opacity-40">·</span>
+                                    <span className="text-white/40">{examInfo.time}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Side: Countdown Grid - Refined for mobile */}
+                    {examInfo && (
+                        <div className="w-full sm:max-w-[280px] md:max-w-sm">
+                            {timeLeft ? (
+                                <div className="grid grid-cols-4 gap-2.5 md:gap-3">
+                                    {[
+                                        { label: 'Days', value: timeLeft.days, color: 'from-blue-400 to-indigo-400' },
+                                        { label: 'Hrs', value: timeLeft.hours, color: 'from-indigo-400 to-purple-400' },
+                                        { label: 'Min', value: timeLeft.mins, color: 'from-purple-400 to-pink-400' },
+                                        { label: 'Sec', value: timeLeft.secs, color: 'from-pink-400 to-rose-400' },
+                                    ].map((item, i) => (
+                                        <div key={i} className="flex flex-col items-center group/item">
+                                            <div className="relative w-full aspect-[4/5] sm:aspect-square bg-white/[0.07] backdrop-blur-2xl rounded-xl border border-white/10 flex items-center justify-center mb-1.5 shadow-lg group-hover/item:border-white/30 group-hover/item:bg-white/[0.1] transition-all duration-300">
+                                                <span className={`text-xl sm:text-2xl font-black bg-gradient-to-b ${item.color} bg-clip-text text-transparent font-mono tabular-nums tracking-tighter`}>
+                                                    {String(item.value).padStart(2, '0')}
+                                                </span>
+                                            </div>
+                                            <span className="text-[9px] md:text-[10px] font-black text-white/20 uppercase tracking-[0.15em]">
+                                                {item.label}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="py-3 px-6 bg-emerald-500/15 backdrop-blur-2xl rounded-2xl border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.1)] animate-pulse">
+                                    <span className="text-emerald-400 font-black text-xs md:text-sm uppercase tracking-[0.2em] block text-center">
+                                        Target Met!
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {!examInfo && (
+                        <div className="flex items-center gap-4 w-full sm:w-auto justify-end sm:justify-start group-hover:translate-x-1 transition-transform pr-2">
+                            <span className="text-white/30 font-bold text-sm tracking-wide">클릭하여 일정 추가</span>
+                            <div className="w-11 h-11 rounded-2xl bg-white/5 border border-dashed border-white/20 flex items-center justify-center group-hover:border-white/40 group-hover:bg-white/10 transition-all">
+                                <Edit3 className="w-5 h-5 text-white/30 group-hover:text-white/50" />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Subtle Footer Overlay */}
+                {examInfo && (
+                    <div className="absolute bottom-2.5 left-6 right-6 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none translate-y-1 group-hover:translate-y-0">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                            <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">Secure Sync</span>
+                        </div>
+                        <span className="text-[9px] text-indigo-400 font-black tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">EDIT TO CHANGE</span>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

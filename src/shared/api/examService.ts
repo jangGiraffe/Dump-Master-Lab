@@ -90,15 +90,25 @@ class ExamService {
         return examsInfo[code]?.description || '';
     }
 
-    // --- D-Day Configuration Methods ---
+    // Helper to get user-specific storage keys
+    private getUserKeys(userId: string) {
+        const suffix = userId || 'guest';
+        return {
+            config: `${LOCAL_EXAM_CONFIG_KEY}_${suffix}`,
+            ts: `${LOCAL_EXAM_CACHE_TS_KEY}_${suffix}`
+        };
+    }
 
     async saveUserExamConfig(userId: string, config: UserExamConfig) {
         const timestamp = Date.now();
-        // 1. Always Save to Local Storage and Update Cache TS
-        localStorage.setItem(LOCAL_EXAM_CONFIG_KEY, JSON.stringify(config));
-        localStorage.setItem(LOCAL_EXAM_CACHE_TS_KEY, timestamp.toString());
+        const keys = this.getUserKeys(userId);
 
-        // 2. Save to Cloud if enabled and not guest
+        // 1. Always Save to Local Storage and Update Cache TS (User-specific)
+        // This allows guest users with IDs to persist their data locally.
+        localStorage.setItem(keys.config, JSON.stringify(config));
+        localStorage.setItem(keys.ts, timestamp.toString());
+
+        // 2. Save to Cloud if enabled and NOT guest
         if (STORAGE_MODE === 'CLOUD' && userId && userId !== 'guest' && !userId.startsWith('guest_')) {
             try {
                 await setDoc(doc(db, 'examConfigs', userId), {
@@ -113,10 +123,11 @@ class ExamService {
 
     async getUserExamConfig(userId: string): Promise<UserExamConfig | null> {
         const now = Date.now();
+        const keys = this.getUserKeys(userId);
 
-        // 1. Check Local Storage first
-        const localData = localStorage.getItem(LOCAL_EXAM_CONFIG_KEY);
-        const cacheTs = localStorage.getItem(LOCAL_EXAM_CACHE_TS_KEY);
+        // 1. Check User-specific Local Storage first
+        const localData = localStorage.getItem(keys.config);
+        const cacheTs = localStorage.getItem(keys.ts);
         const localConfig = localData ? JSON.parse(localData) as UserExamConfig : null;
 
         // 2. If Cloud mode, check cache validity (3 hours)
@@ -126,19 +137,19 @@ class ExamService {
             // If cache is expired or missing, fetch from Cloud
             if (isCacheExpired) {
                 try {
-                    console.log(`[ExamService] Cache expired or missing, fetching from Cloud...`);
+                    console.log(`[ExamService] Cache expired or missing for ${userId}, fetching from Cloud...`);
                     const docSnap = await getDoc(doc(db, 'examConfigs', userId));
                     if (docSnap.exists()) {
                         const cloudConfig = docSnap.data() as UserExamConfig;
                         // Sync local storage and update timestamp
-                        localStorage.setItem(LOCAL_EXAM_CONFIG_KEY, JSON.stringify(cloudConfig));
-                        localStorage.setItem(LOCAL_EXAM_CACHE_TS_KEY, now.toString());
+                        localStorage.setItem(keys.config, JSON.stringify(cloudConfig));
+                        localStorage.setItem(keys.ts, now.toString());
                         return cloudConfig;
                     } else {
-                        // If no cloud data, clear local just in case to be consistent
+                        // If no cloud data, clear user-specific local to be consistent
                         if (localConfig) {
-                            localStorage.removeItem(LOCAL_EXAM_CONFIG_KEY);
-                            localStorage.removeItem(LOCAL_EXAM_CACHE_TS_KEY);
+                            localStorage.removeItem(keys.config);
+                            localStorage.removeItem(keys.ts);
                         }
                         return null;
                     }
@@ -148,7 +159,7 @@ class ExamService {
                     return localConfig;
                 }
             } else {
-                console.log(`[ExamService] Using valid local cache (Age: ${Math.round((now - parseInt(cacheTs)) / 60000)}m)`);
+                console.log(`[ExamService] Using valid local cache for ${userId} (Age: ${Math.round((now - parseInt(cacheTs)) / 60000)}m)`);
             }
         }
 
@@ -156,8 +167,10 @@ class ExamService {
     }
 
     async deleteUserExamConfig(userId: string) {
-        localStorage.removeItem(LOCAL_EXAM_CONFIG_KEY);
-        localStorage.removeItem(LOCAL_EXAM_CACHE_TS_KEY);
+        const keys = this.getUserKeys(userId);
+        localStorage.removeItem(keys.config);
+        localStorage.removeItem(keys.ts);
+
         if (STORAGE_MODE === 'CLOUD' && userId && userId !== 'guest' && !userId.startsWith('guest_')) {
             try {
                 await deleteDoc(doc(db, 'examConfigs', userId));
@@ -166,6 +179,7 @@ class ExamService {
             }
         }
     }
+
 }
 
 export const examService = new ExamService();

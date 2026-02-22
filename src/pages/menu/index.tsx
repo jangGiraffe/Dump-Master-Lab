@@ -46,9 +46,9 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier, us
             </span>
           </div>
 
-          <p className="text-gray-500 dark:text-slate-400 text-center font-medium md:text-lg">
-            계속하려면 모드를 선택하세요
-          </p>
+          <div className="w-full mt-10 animate-slideUp">
+            <DDayCounter userId={userId} userTier={userTier} />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -139,10 +139,9 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier, us
         </div>
 
         <div className="mt-12 space-y-6">
-          <DDayCounter userId={userId} />
           <RandomQuote className="w-full" />
 
-          <div className="text-center">
+          <div className="text-center pt-4">
             <button
               onClick={onLogout}
               className="text-gray-400 hover:text-gray-600 flex items-center justify-center mx-auto text-xs font-medium transition-colors"

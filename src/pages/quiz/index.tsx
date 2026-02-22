@@ -9,7 +9,7 @@ import { RandomQuote } from '@/shared/ui/RandomQuote';
 interface QuizProps {
   questions: Question[];
   timeLimitMinutes: number;
-  onComplete: (userAnswers: Record<string, string>, timeLeft: number) => void;
+  onComplete: (userAnswers: Record<string, string>, timeLeft: number, limitCount?: number) => void;
   wrongCountMap?: Record<string, number>;
   examCodes?: string[];
 }
@@ -23,6 +23,8 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const [showToast, setShowToast] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [unansweredCount, setUnansweredCount] = useState(0);
 
   // Use ref to track if quiz is finished to prevent multiple submissions
   const isFinishedRef = useRef(false);
@@ -45,11 +47,29 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   }, []);
 
   // Finish Handler
-  const handleFinish = useCallback(() => {
+  const handleFinish = useCallback((options?: { force?: boolean, limitCount?: number }) => {
     if (isFinishedRef.current) return;
+
+    if (options?.force) {
+      isFinishedRef.current = true;
+      onComplete(answers, timeLeft, options.limitCount);
+      return;
+    }
+
+    // Calculate unanswered questions
+    // Count questions that don't have an answer in the answers map or have an empty string
+    const answeredCount = questions.filter(q => answers[q.id] && answers[q.id].length > 0).length;
+    const missing = questions.length - answeredCount;
+
+    if (missing > 0) {
+      setUnansweredCount(missing);
+      setShowSubmitModal(true);
+      return;
+    }
+
     isFinishedRef.current = true;
     onComplete(answers, timeLeft);
-  }, [answers, timeLeft, onComplete]);
+  }, [answers, timeLeft, onComplete, questions]);
 
   // Timer Effect - Separate from handleFinish to avoid stale closures
   useEffect(() => {
@@ -721,6 +741,48 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
           </button>
         </div>
       </footer>
+
+      {/* Submission Confirmation Modal */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-md w-full p-8 animate-scaleIn text-center transition-colors duration-300">
+            <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-5">
+              <AlertTriangle className="w-8 h-8 text-yellow-600 dark:text-yellow-500" />
+            </div>
+
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">미풀이 문제 확인</h3>
+            <p className="text-gray-500 dark:text-slate-400 mb-6 leading-relaxed">
+              아직 풀지 않은 문제가 <span className="text-red-500 font-bold">{unansweredCount}건</span> 있습니다.<br />
+              어떻게 제출하시겠습니까?
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => handleFinish({ force: true })}
+                className="w-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 font-bold py-3.5 rounded-xl transition-all border border-gray-200 dark:border-slate-600 flex flex-col items-center justify-center gap-1 group"
+              >
+                <span className="text-sm">나머지 0점 처리 후 제출</span>
+                <span className="text-[10px] font-normal opacity-50 font-mono tracking-tighter">전체 {questions.length}문항 기준으로 채점됩니다</span>
+              </button>
+
+              <button
+                onClick={() => handleFinish({ force: true, limitCount: currentIdx + 1 })}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex flex-col items-center justify-center gap-1 group"
+              >
+                <span className="text-sm">현재 문제까지만 채점</span>
+                <span className="text-[10px] font-normal text-indigo-200 font-mono tracking-tighter">1 ~ {currentIdx + 1}번 문항까지만 포함하여 채점됩니다</span>
+              </button>
+
+              <button
+                onClick={() => setShowSubmitModal(false)}
+                className="w-full bg-white dark:bg-transparent text-gray-400 dark:text-slate-500 font-medium py-3 rounded-xl hover:text-gray-600 dark:hover:text-slate-300 transition-colors text-sm"
+              >
+                돌아가서 계속 풀기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pause Overlay */}
       {isPaused && (
