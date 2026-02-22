@@ -49,7 +49,11 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const resultCardRef = React.useRef<HTMLDivElement>(null);
 
-  const wrongQuestions = questions.filter(q => userAnswers[q.id] !== q.answer);
+  const wrongQuestions = questions.filter(q => {
+    const isError = !q.options || q.options.length === 0 || !q.answer || q.answer.trim() === '';
+    if (isError) return false; // Error questions are always treated as correct
+    return userAnswers[q.id] !== q.answer;
+  });
   const correctCount = questions.length - wrongQuestions.length;
 
   const score = Math.round((correctCount / questions.length) * 100);
@@ -235,7 +239,8 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white ml-1">상세 검토</h3>
           {questions.map((q, idx) => {
             const userAnswer = userAnswers[q.id];
-            const isCorrect = userAnswer === q.answer;
+            const isError = !q.options || q.options.length === 0 || !q.answer || q.answer.trim() === '';
+            const isCorrect = isError || userAnswer === q.answer;
             const isExpanded = expandedId === q.id;
 
             return (

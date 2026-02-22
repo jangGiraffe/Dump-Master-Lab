@@ -57,9 +57,13 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     }
 
     // Calculate unanswered questions
-    // Count questions that don't have an answer in the answers map or have an empty string
-    const answeredCount = questions.filter(q => answers[q.id] && answers[q.id].length > 0).length;
-    const missing = questions.length - answeredCount;
+    // Exclude error questions (missing options or missing answer) from the check
+    const unansweredQuestions = questions.filter(q => {
+      const isError = !q.options || q.options.length === 0 || !q.answer || q.answer.trim() === '';
+      if (isError) return false;
+      return !answers[q.id] || answers[q.id].length === 0;
+    });
+    const missing = unansweredQuestions.length;
 
     if (missing > 0) {
       setUnansweredCount(missing);
@@ -193,8 +197,9 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const handleNext = useCallback(() => {
     const currentQ = questions[currentIdx];
     const currentAnswer = answers[currentQ.id] || "";
+    const isError = !currentQ.options || currentQ.options.length === 0 || !currentQ.answer || currentQ.answer.trim() === '';
 
-    if (currentQ.answer.length > 1 && currentAnswer.length !== currentQ.answer.length) {
+    if (!isError && currentQ.answer.length > 1 && currentAnswer.length !== currentQ.answer.length) {
       alert(`복수 선택 문제입니다!\n총 ${currentQ.answer.length}개의 정답을 선택해주세요. (현재 ${currentAnswer.length}개 선택됨)`);
       return;
     }
