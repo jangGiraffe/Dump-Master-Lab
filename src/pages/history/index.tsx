@@ -12,25 +12,41 @@ interface HistoryProps {
     userId?: string;
 }
 
-const DashboardCard: React.FC<{ title: string; subtitle?: string; value: string | number; unit?: string; icon: React.ReactNode; color: string; delay?: string }> = ({ title, subtitle, value, unit, icon, color, delay }) => (
-    <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-5 border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow duration-200 animate-slideIn ${delay || ''}`}>
-        <div className="flex items-center justify-between mb-4">
-            <div className={`p-2.5 rounded-xl ${color} bg-opacity-10`}>
-                {React.cloneElement(icon as React.ReactElement, { className: `w-6 h-6 ${color.replace('bg-', 'text-')}` })}
+const StatTooltip: React.FC<{ children: React.ReactNode; text: string; className?: string; align?: 'left' | 'center' | 'right' }> = ({ children, text, className, align = 'center' }) => (
+    <div className={`relative group/stat inline-flex flex-col items-center ${className || ''}`}>
+        {children}
+        <div className={`opacity-0 group-hover/stat:opacity-100 transition-opacity duration-200 absolute bottom-full mb-2 pointer-events-none z-50 w-max max-w-[200px] whitespace-normal ${align === 'center' ? 'left-1/2 -translate-x-1/2' : align === 'left' ? 'left-0' : 'right-0'}`}>
+            <div className="bg-gray-900/95 dark:bg-slate-800/95 backdrop-blur-sm text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-xl border border-gray-700/50 dark:border-slate-600/50 font-bold px-3 py-1.5 rounded-md text-center">
+                {text}
             </div>
-            {subtitle && (
-                <span className="text-[10px] font-bold text-gray-300 dark:text-slate-500 uppercase tracking-widest">{subtitle}</span>
-            )}
-        </div>
-        <div>
-            <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1 uppercase tracking-tight">{title}</p>
-            <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-gray-800 dark:text-white tabular-nums">{value}</span>
-                {unit && <span className="text-sm font-bold text-gray-400 dark:text-slate-500">{unit}</span>}
-            </div>
+            <div className={`absolute top-full -mt-px border-4 border-transparent border-t-gray-900/95 dark:border-t-slate-800/95 ${align === 'center' ? 'left-1/2 -translate-x-1/2' : align === 'left' ? 'left-4' : 'right-4'}`}></div>
         </div>
     </div>
 );
+
+const DashboardCard: React.FC<{ title: string; subtitle?: string; value: string | number; unit?: string; icon: React.ReactNode; color: string; delay?: string; tooltip?: string }> = ({ title, subtitle, value, unit, icon, color, delay, tooltip }) => {
+    const content = (
+        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-5 border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow duration-200 animate-slideIn w-full ${delay || ''}`}>
+            <div className="flex items-center justify-between mb-4">
+                <div className={`p-2.5 rounded-xl ${color} bg-opacity-10`}>
+                    {React.cloneElement(icon as React.ReactElement, { className: `w-6 h-6 ${color.replace('bg-', 'text-')}` })}
+                </div>
+                {subtitle && (
+                    <span className="text-[10px] font-bold text-gray-300 dark:text-slate-500 uppercase tracking-widest">{subtitle}</span>
+                )}
+            </div>
+            <div>
+                <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1 uppercase tracking-tight">{title}</p>
+                <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-gray-800 dark:text-white tabular-nums">{value}</span>
+                    {unit && <span className="text-sm font-bold text-gray-400 dark:text-slate-500">{unit}</span>}
+                </div>
+            </div>
+        </div>
+    );
+
+    return tooltip ? <StatTooltip text={tooltip} className="w-full flex-1">{content}</StatTooltip> : content;
+};
 
 const ExamPerformanceCard: React.FC<{
     name: string;
@@ -49,9 +65,11 @@ const ExamPerformanceCard: React.FC<{
                     <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tighter">{totalSolved}문제</span>
                 </div>
             </div>
-            <div className={`text-[10px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0 ${avgScore >= 72 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
-                {avgScore}%
-            </div>
+            <StatTooltip text="정답률: 맞힌 문제 / 전체 문제" align="right">
+                <div className={`text-[10px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0 ${avgScore >= 72 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                    {avgScore}%
+                </div>
+            </StatTooltip>
         </div>
         <div className="flex items-center justify-between gap-4">
             <div className="flex-1 h-1.5 bg-gray-200 dark:bg-slate-600 rounded-full overflow-hidden">
@@ -60,12 +78,14 @@ const ExamPerformanceCard: React.FC<{
                     style={{ width: `${avgScore}%` }}
                 />
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-                <Target className="w-2.5 h-2.5 text-rose-500" />
-                <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">
-                    {passRate}%
-                </span>
-            </div>
+            <StatTooltip text="합격률: 합격 횟수 / 총 응시 횟수" align="right">
+                <div className="flex items-center gap-1 shrink-0">
+                    <Target className="w-2.5 h-2.5 text-rose-500" />
+                    <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">
+                        {passRate}%
+                    </span>
+                </div>
+            </StatTooltip>
         </div>
     </div>
 );
@@ -80,7 +100,7 @@ const ExamGroupCard: React.FC<{
     const hasChildren = childrenStats.length > 0;
 
     return (
-        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden animate-slideIn transition-all ${delay || ''}`}>
+        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slideIn transition-all ${isExpanded ? '' : 'overflow-hidden'} ${delay || ''}`}>
             <div
                 className={`bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/80 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 group ${hasChildren ? 'cursor-pointer hover:bg-gray-100/50 dark:hover:bg-slate-700/50 transition-colors' : ''}`}
                 onClick={() => hasChildren && setIsExpanded(!isExpanded)}
@@ -99,15 +119,19 @@ const ExamGroupCard: React.FC<{
                 </div>
                 <div className="flex items-center gap-2 sm:gap-4 md:w-auto w-full justify-between md:justify-end">
                     <div className="flex items-center gap-4 bg-white dark:bg-slate-900/50 p-2.5 md:p-3 rounded-xl border border-gray-100 dark:border-slate-700">
-                        <div className="flex flex-col items-center px-2">
-                            <span className="text-[9px] uppercase font-bold text-gray-400 dark:text-slate-500 mb-0.5">정답률</span>
-                            <span className={`text-sm md:text-base font-black ${total.avgScore >= 72 ? 'text-emerald-500' : 'text-rose-500'}`}>{total.avgScore}%</span>
-                        </div>
+                        <StatTooltip text="정답률: 맞힌 문제 / 전체 문제" align="center">
+                            <div className="flex flex-col items-center px-2">
+                                <span className="text-[9px] uppercase font-bold text-gray-400 dark:text-slate-500 mb-0.5">정답률</span>
+                                <span className={`text-sm md:text-base font-black ${total.avgScore >= 72 ? 'text-emerald-500' : 'text-rose-500'}`}>{total.avgScore}%</span>
+                            </div>
+                        </StatTooltip>
                         <div className="w-px h-8 bg-gray-100 dark:bg-slate-700"></div>
-                        <div className="flex flex-col items-center px-2">
-                            <span className="text-[9px] uppercase font-bold text-gray-400 dark:text-slate-500 mb-0.5">합격률</span>
-                            <span className="text-sm md:text-base font-black text-gray-700 dark:text-gray-300">{total.passRate}%</span>
-                        </div>
+                        <StatTooltip text="합격률: 합격 횟수 / 총 응시 횟수" align="right">
+                            <div className="flex flex-col items-center px-2">
+                                <span className="text-[9px] uppercase font-bold text-gray-400 dark:text-slate-500 mb-0.5">합격률</span>
+                                <span className="text-sm md:text-base font-black text-gray-700 dark:text-gray-300">{total.passRate}%</span>
+                            </div>
+                        </StatTooltip>
                     </div>
                     {hasChildren && (
                         <div className="p-2 shrink-0 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 transition-colors group-hover:bg-gray-200 dark:group-hover:bg-slate-600">
@@ -274,7 +298,9 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
             if (r.timestamp > map[groupCode].lastTimestamp) map[groupCode].lastTimestamp = r.timestamp;
 
             // 개별 소스(subName) 통계 분리 누적
-            // 기록 안에 여러 개의 시험이 섞여 있었다고 해도, 각각의 name(예: MLA-C01-100Q) 카드로 분리해서 통계를 똑같이 더해줌
+            // 기록 안에 여러 개의 시험이 섞여 있었다면, 각 버전에 대해 비례적으로 할당하여 
+            // 전체 통계의 합이 실제 문제 수와 일치하도록 보정함
+            const subCount = r.examNames.length;
             r.examNames.forEach(id => {
                 const sourceInfo = dataSources.find(ds => ds.id === id);
                 const subName = sourceInfo?.name || (id === 'Unknown' ? '알 수 없는 데이터' : id);
@@ -282,30 +308,52 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                 if (!map[groupCode].sub[subName]) {
                     map[groupCode].sub[subName] = { totalQ: 0, correctC: 0, attempts: 0, passC: 0 };
                 }
-                map[groupCode].sub[subName].totalQ += r.totalQuestions;
-                map[groupCode].sub[subName].correctC += r.correctCount;
+                // 비례적 가중치 적용 (N개 버전을 함께 응시한 경우 1/N씩 배분)
+                map[groupCode].sub[subName].totalQ += (r.totalQuestions / subCount);
+                map[groupCode].sub[subName].correctC += (r.correctCount / subCount);
                 map[groupCode].sub[subName].attempts += 1;
                 if (r.isPass) map[groupCode].sub[subName].passC += 1;
             });
         });
 
-        return Object.values(map).map(group => ({
-            groupName: group.groupName,
-            total: {
-                avgScore: group.total.totalQ > 0 ? Math.round((group.total.correctC / group.total.totalQ) * 100) : 0,
-                totalSolved: group.total.totalQ,
-                passRate: group.total.attempts > 0 ? Math.round((group.total.passC / group.total.attempts) * 100) : 0,
-                attempts: group.total.attempts,
-            },
-            childrenStats: Object.entries(group.sub).map(([name, stats]) => ({
+        return Object.values(map).map(group => {
+            const totalToDistribute = Math.round(group.total.totalQ);
+
+            // 하위 통계 생성
+            let rawChildren = Object.entries(group.sub).map(([name, stats]) => ({
                 name,
                 avgScore: stats.totalQ > 0 ? Math.round((stats.correctC / stats.totalQ) * 100) : 0,
-                totalSolved: stats.totalQ,
+                totalSolvedFloat: stats.totalQ,
+                totalSolved: Math.round(stats.totalQ),
                 passRate: stats.attempts > 0 ? Math.round((stats.passC / stats.attempts) * 100) : 0,
                 attempts: stats.attempts,
-            })).sort((a, b) => b.attempts - a.attempts),
-            lastTimestamp: group.lastTimestamp
-        })).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+            }));
+
+            // 반올림 오차 보정 (합계가 전체와 일치하도록)
+            const currentSum = rawChildren.reduce((acc, c) => acc + c.totalSolved, 0);
+            const diff = totalToDistribute - currentSum;
+
+            if (diff !== 0 && rawChildren.length > 0) {
+                // 문제 수가 가장 많은 항목에 오차 배분 (가장 티가 안 나는 곳)
+                const sortedByCount = [...rawChildren].sort((a, b) => b.totalSolvedFloat - a.totalSolvedFloat);
+                const targetName = sortedByCount[0].name;
+                rawChildren = rawChildren.map(c =>
+                    c.name === targetName ? { ...c, totalSolved: c.totalSolved + diff } : c
+                );
+            }
+
+            return {
+                groupName: group.groupName,
+                total: {
+                    avgScore: group.total.totalQ > 0 ? Math.round((group.total.correctC / group.total.totalQ) * 100) : 0,
+                    totalSolved: totalToDistribute,
+                    passRate: group.total.attempts > 0 ? Math.round((group.total.passC / group.total.attempts) * 100) : 0,
+                    attempts: group.total.attempts,
+                },
+                childrenStats: rawChildren.sort((a, b) => b.attempts - a.attempts),
+                lastTimestamp: group.lastTimestamp
+            };
+        }).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
     };
 
     // 오늘 푼 데이터 계산 (정답 수 / 전체 문제 수)
@@ -477,6 +525,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                             icon={<BarChart3 />}
                                             color="bg-blue-600"
                                             delay="animate-slideInStagger1"
+                                            tooltip="전체 문제 중 맞힌 문제의 비율"
                                         />
                                         <DashboardCard
                                             title="누적 문제 수"
@@ -485,6 +534,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                             icon={<BookOpen />}
                                             color="bg-indigo-600"
                                             delay="animate-slideInStagger2"
+                                            tooltip="지금까지 풀었던 모든 문제의 총합"
                                         />
                                         <DashboardCard
                                             title="누적 공부 시간"
@@ -492,6 +542,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                             icon={<Clock />}
                                             color="bg-amber-600"
                                             delay="animate-slideInStagger3"
+                                            tooltip="시험 응시 과정에서 소요된 총 시간"
                                         />
                                         <DashboardCard
                                             title="합격률"
@@ -500,6 +551,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                             icon={<Target />}
                                             color="bg-rose-600"
                                             delay="animate-slideInStagger4"
+                                            tooltip="전체 응시 중 합격 횟수의 비율"
                                         />
                                     </div>
 
@@ -530,6 +582,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                         icon={<Award />}
                                         color="bg-emerald-600"
                                         delay="animate-slideInStagger1"
+                                        tooltip="오늘 푼 문제 중 맞힌 문제의 비율"
                                     />
                                     <DashboardCard
                                         title="오늘 푼 문제수"
@@ -538,6 +591,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                         icon={<Calendar />}
                                         color="bg-teal-600"
                                         delay="animate-slideInStagger2"
+                                        tooltip="오늘 하루 동안 해결한 총 문제 수"
                                     />
                                     <DashboardCard
                                         title="오늘 공부 시간"
@@ -545,6 +599,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                         icon={<Clock />}
                                         color="bg-cyan-600"
                                         delay="animate-slideInStagger3"
+                                        tooltip="오늘 시험 응시 과정에서 소요된 시간"
                                     />
                                     <DashboardCard
                                         title="오늘 합격률"
@@ -553,6 +608,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                         icon={<Target />}
                                         color="bg-emerald-500"
                                         delay="animate-slideInStagger4"
+                                        tooltip="오늘 응시 중 합격 횟수의 비율"
                                     />
                                 </div>
 
@@ -590,60 +646,72 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                                     className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border-l-4 border border-gray-200 dark:border-slate-700 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
                                                 >
                                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                        <div className="flex-shrink-0">
-                                                            <ResultCharacter score={record.score} size={64} />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                                                                    {record.isPass ? 'PASS' : 'FAIL'}
-                                                                </span>
-                                                                {record.isRetry && (
-                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-                                                                        재시험
+                                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                            <div className="flex-shrink-0">
+                                                                <ResultCharacter score={record.score} size={64} />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                                        {record.isPass ? 'PASS' : 'FAIL'}
                                                                     </span>
-                                                                )}
-                                                                <span className="text-xs text-gray-400 dark:text-slate-500 flex items-center ml-1">
-                                                                    <Clock className="w-3 h-3 mr-1" />
-                                                                    {formatDate(record.timestamp).split(' ').slice(2).join(' ')}
-                                                                </span>
-                                                            </div>
-                                                            <h3 className="font-semibold text-gray-800 dark:text-white text-base md:text-lg mb-1">
-                                                                {resolveExamGroupId(record.examNames)}
-                                                            </h3>
-                                                            <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium">
-                                                                {record.examNames.join(', ')}
-                                                            </p>
-                                                        </div>
-
-                                                        <div className="flex items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-lg w-full md:w-auto md:gap-8">
-                                                            <div className="flex-1 text-center">
-                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Score</p>
-                                                                <p className={`text-base md:text-lg font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
-                                                                    {record.score}%
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex-1 text-center border-x border-gray-200 dark:border-slate-600 px-2 md:px-8">
-                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Accuracy</p>
-                                                                <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200">
-                                                                    {record.correctCount}/{record.totalQuestions}
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex-1 text-center">
-                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Time</p>
-                                                                <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200 whitespace-nowrap">
-                                                                    {Math.floor(record.timeTakenSeconds / 60)}분 {record.timeTakenSeconds % 60}초
+                                                                    {record.isRetry && (
+                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                                                                            재시험
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="text-xs text-gray-400 dark:text-slate-500 flex items-center ml-1">
+                                                                        <Clock className="w-3 h-3 mr-1" />
+                                                                        {formatDate(record.timestamp).split(' ').slice(2).join(' ')}
+                                                                    </span>
+                                                                </div>
+                                                                <h3 className="font-semibold text-gray-800 dark:text-white text-base md:text-lg mb-0.5 truncate">
+                                                                    {resolveExamGroupId(record.examNames)}
+                                                                </h3>
+                                                                <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium truncate">
+                                                                    {record.examNames.join(', ')}
                                                                 </p>
                                                             </div>
                                                         </div>
 
-                                                        <button
-                                                            onClick={(e) => handleDelete(record.id, e)}
-                                                            className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors md:ml-2 self-end md:self-center"
-                                                            title="삭제"
-                                                        >
-                                                            <Trash2 className="w-5 h-5" />
-                                                        </button>
+                                                        <div className="flex-shrink-0 flex items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-lg w-full md:w-[300px] lg:w-[320px]">
+                                                            <div className="grid grid-cols-3 w-full">
+                                                                <div className="text-center">
+                                                                    <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold mb-0.5">Score</p>
+                                                                    <StatTooltip text="시험 점수">
+                                                                        <p className={`text-sm md:text-base font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
+                                                                            {record.score}%
+                                                                        </p>
+                                                                    </StatTooltip>
+                                                                </div>
+                                                                <div className="text-center border-x border-gray-200 dark:border-slate-600 px-1 text-xs">
+                                                                    <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold mb-0.5">Accuracy</p>
+                                                                    <StatTooltip text="맞힌 문제 / 전체 문제">
+                                                                        <p className="text-sm md:text-base font-bold text-gray-700 dark:text-slate-200">
+                                                                            {record.correctCount}/{record.totalQuestions}
+                                                                        </p>
+                                                                    </StatTooltip>
+                                                                </div>
+                                                                <div className="text-center pl-1">
+                                                                    <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold mb-0.5">Time</p>
+                                                                    <StatTooltip text="시험 소요 시간">
+                                                                        <p className="text-sm md:text-base font-bold text-gray-700 dark:text-slate-200 whitespace-nowrap">
+                                                                            {Math.floor((record.timeTakenSeconds || 0) / 60)}분 {(record.timeTakenSeconds || 0) % 60}초
+                                                                        </p>
+                                                                    </StatTooltip>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex md:block self-end md:self-center">
+                                                            <button
+                                                                onClick={(e) => handleDelete(record.id, e)}
+                                                                className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors md:ml-2"
+                                                                title="삭제"
+                                                            >
+                                                                <Trash2 className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}
@@ -671,60 +739,72 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                                     className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border-l-4 border border-gray-200 dark:border-slate-700 p-4 md:p-6 transition-all hover:shadow-md animate-slideIn"
                                                 >
                                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                        <div className="flex-shrink-0">
-                                                            <ResultCharacter score={record.score} size={64} />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                                                                    {record.isPass ? 'PASS' : 'FAIL'}
-                                                                </span>
-                                                                {record.isRetry && (
-                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-                                                                        재시험
+                                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                            <div className="flex-shrink-0">
+                                                                <ResultCharacter score={record.score} size={64} />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${record.isPass ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                                        {record.isPass ? 'PASS' : 'FAIL'}
                                                                     </span>
-                                                                )}
-                                                                <span className="text-xs text-gray-400 dark:text-slate-500 flex items-center ml-1">
-                                                                    <Calendar className="w-3 h-3 mr-1" />
-                                                                    {formatDate(record.timestamp)}
-                                                                </span>
-                                                            </div>
-                                                            <h3 className="font-semibold text-gray-800 dark:text-white text-base md:text-lg mb-1">
-                                                                {resolveExamGroupId(record.examNames)}
-                                                            </h3>
-                                                            <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium">
-                                                                {record.examNames.join(', ')}
-                                                            </p>
-                                                        </div>
-
-                                                        <div className="flex items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-lg w-full md:w-auto md:gap-8">
-                                                            <div className="flex-1 text-center">
-                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Score</p>
-                                                                <p className={`text-base md:text-lg font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
-                                                                    {record.score}%
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex-1 text-center border-x border-gray-200 dark:border-slate-600 px-2 md:px-8">
-                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Accuracy</p>
-                                                                <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200">
-                                                                    {record.correctCount}/{record.totalQuestions}
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex-1 text-center">
-                                                                <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold">Time</p>
-                                                                <p className="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200 whitespace-nowrap">
-                                                                    {Math.floor(record.timeTakenSeconds / 60)}분 {record.timeTakenSeconds % 60}초
+                                                                    {record.isRetry && (
+                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                                                                            재시험
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="text-xs text-gray-400 dark:text-slate-500 flex items-center ml-1">
+                                                                        <Calendar className="w-3 h-3 mr-1" />
+                                                                        {formatDate(record.timestamp)}
+                                                                    </span>
+                                                                </div>
+                                                                <h3 className="font-semibold text-gray-800 dark:text-white text-base md:text-lg mb-0.5 truncate">
+                                                                    {resolveExamGroupId(record.examNames)}
+                                                                </h3>
+                                                                <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium truncate">
+                                                                    {record.examNames.join(', ')}
                                                                 </p>
                                                             </div>
                                                         </div>
 
-                                                        <button
-                                                            onClick={(e) => handleDelete(record.id, e)}
-                                                            className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors md:ml-2 self-end md:self-center"
-                                                            title="삭제"
-                                                        >
-                                                            <Trash2 className="w-5 h-5" />
-                                                        </button>
+                                                        <div className="flex-shrink-0 flex items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-lg w-full md:w-[300px] lg:w-[320px]">
+                                                            <div className="grid grid-cols-3 w-full">
+                                                                <div className="text-center">
+                                                                    <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold mb-0.5">Score</p>
+                                                                    <StatTooltip text="시험 점수">
+                                                                        <p className={`text-sm md:text-base font-bold ${record.isPass ? 'text-success' : 'text-danger'}`}>
+                                                                            {record.score}%
+                                                                        </p>
+                                                                    </StatTooltip>
+                                                                </div>
+                                                                <div className="text-center border-x border-gray-200 dark:border-slate-600 px-1 text-xs">
+                                                                    <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold mb-0.5">Accuracy</p>
+                                                                    <StatTooltip text="맞힌 문제 / 전체 문제">
+                                                                        <p className="text-sm md:text-base font-bold text-gray-700 dark:text-slate-200">
+                                                                            {record.correctCount}/{record.totalQuestions}
+                                                                        </p>
+                                                                    </StatTooltip>
+                                                                </div>
+                                                                <div className="text-center pl-1">
+                                                                    <p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase font-bold mb-0.5">Time</p>
+                                                                    <StatTooltip text="시험 소요 시간">
+                                                                        <p className="text-sm md:text-base font-bold text-gray-700 dark:text-slate-200 whitespace-nowrap">
+                                                                            {Math.floor((record.timeTakenSeconds || 0) / 60)}분 {(record.timeTakenSeconds || 0) % 60}초
+                                                                        </p>
+                                                                    </StatTooltip>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex md:block self-end md:self-center">
+                                                            <button
+                                                                onClick={(e) => handleDelete(record.id, e)}
+                                                                className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors md:ml-2"
+                                                                title="삭제"
+                                                            >
+                                                                <Trash2 className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}
