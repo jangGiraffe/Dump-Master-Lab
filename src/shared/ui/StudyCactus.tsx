@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+interface Bulb {
+    id: number;
+    x: number;
+    y: number;
+}
+
 export const StudyCactus: React.FC = () => {
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [bulbs, setBulbs] = useState<Bulb[]>([]);
     const svgRef = useRef<SVGSVGElement>(null);
 
     useEffect(() => {
@@ -27,12 +34,29 @@ export const StudyCactus: React.FC = () => {
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
+    const handleClick = () => {
+        // Random position around the cactus body (viewBox 200x120)
+        // Widened X range to cover more area around the cactus
+        const x = 40 + Math.random() * 120; // 40 to 160 (center is 100)
+        const y = 40 + Math.random() * 50;  // 40 to 90
+
+        const id = Date.now() + Math.random();
+        setBulbs(prev => [...prev, { id, x, y }]);
+
+        // Remove the bulb after animation completes (1.5s)
+        setTimeout(() => {
+            setBulbs(prev => prev.filter(bulb => bulb.id !== id));
+        }, 1500);
+    };
+
     return (
         <div className="flex justify-center items-center w-full my-4 opacity-100 transition-opacity cursor-pointer animate-fadeIn">
             <svg
                 ref={svgRef}
                 width="240" height="140" viewBox="0 0 200 120"
                 xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg"
+                onClick={handleClick}
+                style={{ overflow: 'visible' }}
             >
                 <defs>
                     <style>
@@ -65,6 +89,11 @@ export const StudyCactus: React.FC = () => {
                 20% { opacity: 1; }
                 80% { opacity: 0.8; }
                 100% { transform: translate(10px, -20px) scale(1.2); opacity: 0; }
+              }
+              @keyframes riseAndFade {
+                0% { transform: translateY(0) scale(0.5); opacity: 0; }
+                20% { opacity: 1; transform: translateY(-15px) scale(1.2); }
+                100% { transform: translateY(-70px) scale(1.1); opacity: 0; }
               }
             `}
                     </style>
@@ -207,6 +236,30 @@ export const StudyCactus: React.FC = () => {
                     <text x="125" y="50" fontSize="6" fill="#FCA5A5" style={{ textShadow: '0px 0px 2px rgba(0,0,0,0.5)' }}>♫</text>
                 </g>
 
+                {/* Light Bulbs */}
+                {bulbs.map(bulb => (
+                    <g
+                        key={bulb.id}
+                        transform={`translate(${bulb.x}, ${bulb.y})`}
+                        style={{ pointerEvents: 'none' }}
+                    >
+                        <g style={{ animation: 'riseAndFade 1.5s ease-out forwards' }}>
+                            <text
+                                x="0"
+                                y="0"
+                                fontSize="24"
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                style={{
+                                    userSelect: 'none',
+                                    filter: 'drop-shadow(0px 0px 6px rgba(253, 224, 71, 0.9))'
+                                }}
+                            >
+                                💡
+                            </text>
+                        </g>
+                    </g>
+                ))}
             </svg>
         </div>
     );
