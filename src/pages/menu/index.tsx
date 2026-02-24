@@ -3,6 +3,7 @@ import { BookOpen, PenTool, LogOut, BarChart2, Swords } from 'lucide-react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { RandomQuote } from '@/shared/ui/RandomQuote';
 import { DDayCounter } from '@/shared/ui/DDayCounter';
+import { StudyCactus } from '@/shared/ui/StudyCactus';
 
 import { APP_CONFIG } from '@/shared/config';
 import { UserTier } from '@/shared/model/types';
@@ -46,7 +47,9 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier, us
             </span>
           </div>
 
-          <div className="w-full mt-10 animate-slideUp">
+          <StudyCactus />
+
+          <div className="w-full mt-6 mb-4 animate-slideUp">
             <DDayCounter userId={userId} userTier={userTier} />
           </div>
         </div>

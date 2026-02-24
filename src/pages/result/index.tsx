@@ -46,8 +46,14 @@ const ImageResultCard: React.FC<{ score: number }> = ({ score }) => (
 export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTakenSeconds, onRestart, onRetryWrong, examCodes }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const resultCardRef = React.useRef<HTMLDivElement>(null);
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
 
   const wrongQuestions = questions.filter(q => {
     const isError = !q.options || q.options.length === 0 || !q.answer || q.answer.trim() === '';
@@ -91,7 +97,7 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
       link.click();
     } catch (err) {
       console.error('Failed to download image', err);
-      alert('이미지 생성에 실패했습니다.');
+      showToast('이미지 생성에 실패했습니다.');
     }
   };
 
@@ -144,7 +150,7 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
             <button
               onClick={() => {
                 const text = `🏆 Dump Master Lab 시험 결과\n\n점수: ${score}%\n결과: ${isPass ? '합격 🎉' : '불합격 😅'} \n전체 ${questions.length}문제 중 ${correctCount}문제 정답!\n\n나의 성장을 확인해보세요! #DumpMasterLab #열공`;
-                navigator.clipboard.writeText(text).then(() => alert("공유 문구가 복사되었습니다! SNS에 게시해보세요."));
+                navigator.clipboard.writeText(text).then(() => showToast("공유 문구가 복사되었습니다! SNS에 게시해보세요."));
               }}
               className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors text-sm w-full sm:w-auto shadow-md"
             >
@@ -191,7 +197,7 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
                   const prompt = `다음은 내가 틀린 문제들이다. [${examCodes.join(', ')}] 시험의 기출문제들이야. 이 문제들과 비슷한 유형의 퀴즈를 내줘:\n\n${wrongQuestionsText}`;
 
                   navigator.clipboard.writeText(prompt).then(() => {
-                    alert('틀린 문제들이 클립보드에 복사되었습니다. 제미나이에게 붙여넣어 비슷한 문제를 요청해보세요!');
+                    showToast('틀린 문제들이 복사되었습니다. 제미나이에게 붙여넣어 비슷한 문제를 요청해보세요!');
                   });
                 }}
                 className="bg-indigo-500/20 hover:bg-indigo-500/30 text-white border border-white/20 transition-colors py-2.5 px-6 rounded-xl text-sm font-bold shadow-md flex items-center gap-2 backdrop-blur-sm"
@@ -343,6 +349,7 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
 
                           navigator.clipboard.writeText(text).then(() => {
                             setCopiedId(q.id);
+                            showToast("클립보드에 복사되었습니다! 제미나이나 ChatGPT 등에 붙여넣어 질문해보세요.");
                             setTimeout(() => setCopiedId(null), 2000);
                           });
                         }}
@@ -360,6 +367,15 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
           })}
         </div>
       </div>
+      {/* Global Toast Message */}
+      {toastMsg && (
+        <div className="fixed top-8 left-0 w-full z-[200] flex justify-center pointer-events-none">
+          <div className="animate-slideUp pointer-events-auto bg-indigo-600/95 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl border border-white/20 flex items-center gap-3">
+            <Bot className="w-5 h-5 text-indigo-200" />
+            {toastMsg}
+          </div>
+        </div>
+      )}
     </div >
   );
 };

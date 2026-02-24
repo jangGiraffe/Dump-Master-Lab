@@ -63,6 +63,7 @@ export interface DataSource {
   requiredTier?: UserTier[]; // Tiers allowed to access
   url?: string;
   data?: any[]; // Pre-loaded data
+  isEncrypted?: boolean;
 }
 
 export interface Dataset extends DataSource {

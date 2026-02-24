@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Question } from '@/shared/model/types';
 import { formatTime } from '@/shared/lib/utils';
-import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown, Pause, Play } from 'lucide-react';
+import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown, Pause, Play, Bot } from 'lucide-react';
 import { QuizTutorial } from './ui/QuizTutorial';
 import { RandomQuote } from '@/shared/ui/RandomQuote';
 
@@ -21,6 +21,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const [showExplanation, setShowExplanation] = useState(false);
   const [showTutorial, setShowTutorial] = useState(true);
   const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
   const [showOriginal, setShowOriginal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -153,6 +154,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
     try {
       await navigator.clipboard.writeText(text);
+      setToastMsg("질문과 답이 복사됐어요. 제미나이나 ChatGPT 등에 붙여넣어 질문해보세요.");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
@@ -200,7 +202,9 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     const isError = !currentQ.options || currentQ.options.length === 0 || !currentQ.answer || currentQ.answer.trim() === '';
 
     if (!isError && currentQ.answer.length > 1 && currentAnswer.length !== currentQ.answer.length) {
-      alert(`복수 선택 문제입니다!\n총 ${currentQ.answer.length}개의 정답을 선택해주세요. (현재 ${currentAnswer.length}개 선택됨)`);
+      setToastMsg(`복수 선택 문제입니다! 총 ${currentQ.answer.length}개의 정답을 선택해주세요.`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
       return;
     }
 
@@ -707,9 +711,11 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
       {/* Toast Notification */}
       {showToast && (
-        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-gray-800/90 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center animate-fadeIn backdrop-blur-sm whitespace-nowrap">
-          <Copy className="w-4 h-4 mr-2 text-green-400" />
-          <span className="text-sm font-medium">질문과 답이 복사됐어요. AI에게 질문해보세요</span>
+        <div className="fixed top-20 left-0 w-full z-[100] flex justify-center pointer-events-none">
+          <div className="animate-slideUp pointer-events-auto bg-indigo-600/95 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl border border-white/20 flex items-center gap-3">
+            <Bot className="w-5 h-5 text-indigo-200" />
+            {toastMsg}
+          </div>
         </div>
       )}
 

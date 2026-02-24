@@ -108,42 +108,82 @@ export const historyService = {
     },
 
     deleteRecord: async (id: string) => {
+        return historyService.deleteRecords([id]);
+    },
+
+    deleteRecords: async (ids: string[]) => {
+        if (ids.length === 0) return;
+        console.log(`[HistoryService] Attempting to delete ${ids.length} records. (Mode: ${STORAGE_MODE})`);
+
+        // 1. Delete from Firestore if in CLOUD mode
         if (STORAGE_MODE === 'CLOUD') {
             try {
-                await deleteDoc(doc(db, 'history', id));
+                // Delete in parallel
+                await Promise.all(ids.map(async (id) => {
+                    const docRef = doc(db, 'history', id);
+                    await deleteDoc(docRef);
+                }));
+                console.log(`[HistoryService] Successfully deleted ${ids.length} records from Firestore.`);
             } catch (e) {
-                console.error("Error deleting from Firestore:", e);
+                console.error("[HistoryService] Error deleting from Firestore:", e);
+                throw e;
             }
         }
 
+        // 2. Delete from Local Cache
         const allLocalData = localStorage.getItem(STORAGE_KEY);
         if (allLocalData) {
             const allRecords: HistoryRecord[] = JSON.parse(allLocalData);
-            const filtered = allRecords.filter(r => r.id !== id);
+            const idSet = new Set(ids);
+            const filtered = allRecords.filter(r => !idSet.has(r.id));
             localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+            console.log(`[HistoryService] Deleted ${ids.length} records from local cache.`);
         }
     },
 
     syncLocalToCloud: async (userId: string): Promise<number> => {
-        if (STORAGE_MODE !== 'CLOUD') return 0;
+        if (STORAGE_MODE !== 'CLOUD' || !userId) return 0;
 
-        const localRecords = historyService.getLocalRecords();
-        if (localRecords.length === 0) return 0;
+        const allLocalRecords = historyService.getLocalRecords();
+        // Only sync records belonging to this user or anonymous ones
+        const localRecordsToSync = allLocalRecords.filter(r => r.userId === userId || r.userId === 'anonymous');
 
-        // Fetch current cloud records to avoid duplicates (Force fetch here)
+        if (localRecordsToSync.length === 0) return 0;
+
+        // Fetch current cloud records for comparison
         const cloudRecords = await historyService.getRecords(userId, true);
         const cloudKeys = new Set(cloudRecords.map(r => `${r.timestamp}_${r.score}`));
 
         let syncCount = 0;
-        for (const local of localRecords) {
+        const syncedIds: string[] = [];
+
+        for (const local of localRecordsToSync) {
             const key = `${local.timestamp}_${local.score}`;
             if (!cloudKeys.has(key)) {
-                const { id, ...data } = local;
-                await addDoc(collection(db, 'history'), {
-                    ...data,
-                    userId
-                });
-                syncCount++;
+                try {
+                    const { id: _, ...data } = local;
+                    await addDoc(collection(db, 'history'), {
+                        ...data,
+                        userId
+                    });
+                    syncedIds.push(local.id);
+                    syncCount++;
+                } catch (e) {
+                    console.error("[HistoryService] Failed to sync record:", local.id, e);
+                }
+            } else {
+                // Already in cloud, mark for local removal to cleanup IDs
+                syncedIds.push(local.id);
+            }
+        }
+
+        // Cleanup local copies that are now in cloud (they'll be re-fetched with cloud IDs)
+        if (syncedIds.length > 0) {
+            const allData = localStorage.getItem(STORAGE_KEY);
+            if (allData) {
+                const allRecords: HistoryRecord[] = JSON.parse(allData);
+                const remaining = allRecords.filter(r => !syncedIds.includes(r.id));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(remaining));
             }
         }
 

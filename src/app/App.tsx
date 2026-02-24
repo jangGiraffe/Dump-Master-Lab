@@ -11,7 +11,7 @@ import { dataSources } from '@/shared/api/dataService';
 import { historyService } from '@/shared/api/historyService';
 import { shuffleArray, processRawQuestions, authenticateUser } from '@/shared/lib/utils';
 import { APP_CONFIG } from '@/shared/config';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Bot } from 'lucide-react';
 // Import crypto-js for decryption
 import CryptoJS from 'crypto-js';
 
@@ -30,6 +30,12 @@ const App: React.FC = () => {
   const [bossRaidWrongIds, setBossRaidWrongIds] = useState<string[]>([]);
   const [userHash, setUserHash] = useState<string>('');
   const [timeTaken, setTimeTaken] = useState<number>(0);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
 
   // Restore session on mount
   React.useEffect(() => {
@@ -98,105 +104,66 @@ const App: React.FC = () => {
 
       const loadedDatasets: Dataset[] = await Promise.all(
         availableSources.map(async (source: DataSource) => {
-          if (source.data) {
+          try {
+            const response = await fetch(source.url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const rawData = await response.json();
+
+            // Decrypt logic
+            let data = rawData;
+            if (source.isEncrypted && decryptionKey) {
+              const ciphertext = rawData.encryptedData || rawData.payload || rawData;
+              const bytes = CryptoJS.AES.decrypt(ciphertext, decryptionKey);
+              const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+              data = decryptedData;
+            }
+
             return {
               id: source.id,
               name: source.name,
-              url: source.url || '',
+              data: data,
               examCode: source.examCode,
-              examName: source.examName,
-              data: source.data
+              url: source.url
             };
-          }
-
-          if (source.url) {
-            // Append version as query param to bust browser cache
-            const cacheBustUrl = `${source.url}?v=${APP_CONFIG.VERSION}`;
-            const response = await fetch(cacheBustUrl);
-            if (!response.ok) {
-              throw new Error(`Failed to load ${source.name}`);
-            }
-            const data = await response.json();
-
-            // Decryption Logic
-            // If data has 'encryptedData' property, we try to decrypt
-            if (data.encryptedData) {
-              if (!decryptionKey) {
-                // Start as Guest or without password -> Access Denied to encrypted content
-                // But maybe allow if it's public? 
-                // Actually, if it is encrypted, we NEED the key.
-                // If no key (Guest login), they shouldn't see encrypted files anyway? 
-                // Wait, logic in dataService says Guest only sees 'sample_questions'. 
-                // Encrypted files are only for V (and maybe N).
-                throw new Error(`Encrypted content requires a valid password/key.`);
-              }
-
-              try {
-                const bytes = CryptoJS.AES.decrypt(data.encryptedData, decryptionKey);
-                const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
-
-                if (!decryptedString) {
-                  throw new Error('Decryption Failed');
-                }
-
-                const decryptedData = JSON.parse(decryptedString);
-                return {
-                  id: source.id,
-                  name: source.name,
-                  url: source.url,
-                  examCode: source.examCode,
-                  examName: source.examName,
-                  data: decryptedData
-                };
-              } catch (e) {
-                console.error("Decryption failed for:", source.name);
-                throw new Error(`Failed to decrypt ${source.name}. Invalid password.`);
-              }
-            }
-
-            // Not encrypted (e.g. sample_questions.json or already plain array)
+          } catch (e) {
+            console.error(`Failed to load ${source.url}`, e);
             return {
               id: source.id,
               name: source.name,
-              url: source.url,
+              data: [],
               examCode: source.examCode,
-              examName: source.examName,
-              data: data
+              url: source.url
             };
           }
-
-          throw new Error(`Invalid data source: ${source.name}`);
         })
       );
 
-      setDatasets(loadedDatasets);
+      setDatasets(loadedDatasets.filter(d => d.data.length > 0));
       setStage(AppStage.MENU);
-    } catch (err) {
-      console.error("Failed to load question banks:", err);
-      // More specific error message if decryption failed
-      if ((err as Error).message.includes('Invalid password')) {
-        setError("데이터 복호화 실패: 비밀번호가 올바르지 않거나 데이터가 손상되었습니다.");
-      } else {
-        setError("문제 데이터를 불러오는 데 실패했습니다. 데이터 설정을 확인해주세요.");
-      }
+    } catch (e) {
+      console.error("Failed to load datasets", e);
+      setError('데이터를 불러오는 중 오류가 발생했습니다. 라이선스 키를 확인해주세요.');
+      setStage(AppStage.LOADING);
     }
   };
 
-  const handleLogin = (tier: UserTier, userId: string, inputPassword?: string) => {
+  const handleLogin = (tier: UserTier, userId?: string, password?: string) => {
     setUserTier(tier);
-    setUserHash(userId);
-    // Save session to localStorage with timestamp
+    const finalUserId = userId || (password ? 'user_' + password.substring(0, 6) : 'guest');
+    setUserHash(finalUserId);
+
+    // Save session
     localStorage.setItem(SESSION_KEY, JSON.stringify({
       tier,
-      userId,
-      password: inputPassword,
+      userId: finalUserId,
+      password,
       timestamp: Date.now()
     }));
-    // Pass password for decryption if available
-    loadData(tier, inputPassword);
 
-    // Initial sync of history from DB to Local
-    historyService.getRecords(userId, true).catch(err => {
+    loadData(tier, password);
+
+    // Initial sync
+    historyService.syncLocalToCloud(finalUserId).catch(err => {
       console.error("Failed to perform initial history sync:", err);
     });
   };
@@ -221,7 +188,7 @@ const App: React.FC = () => {
       const allWrongIds = Array.from(new Set(records.flatMap(r => r.wrongQuestionIds || [])));
 
       if (allWrongIds.length === 0) {
-        alert("정복할 보스가 없습니다! (아직 틀린 문제가 없습니다. 먼저 모의고사를 풀어보세요.)");
+        showToast("정복할 보스가 없습니다! (아직 틀린 문제가 없습니다. 먼저 모의고사를 풀어보세요.)");
         return;
       }
 
@@ -236,7 +203,7 @@ const App: React.FC = () => {
     const allWrongIds = Array.from(new Set(records.flatMap(r => r.wrongQuestionIds || [])));
 
     if (allWrongIds.length === 0) {
-      alert("정복할 보스가 없습니다! (아직 틀린 문제가 없습니다. 먼저 모의고사를 풀어보세요.)");
+      showToast("정복할 보스가 없습니다! (아직 틀린 문제가 없습니다. 먼저 모의고사를 풀어보세요.)");
       return;
     }
 
@@ -254,18 +221,10 @@ const App: React.FC = () => {
     });
 
     // 2. Filter by wrong IDs
-    // Note: The ID structure might be different if processRawQuestions uses Date.now()
-    // We should probably change how IDs are generated to be stable.
-    // Let's assume for now we match by question text or a more stable ID.
-    // Actually, let's fix processRawQuestions ID generation first to be stable.
-
-    // For now, let's try to match by ID
     const bossQuestions = allAvailableQuestions.filter(q => allWrongIds.includes(q.id));
 
     if (bossQuestions.length === 0) {
-      // Fallback: match by question text hash or content if ID is unstable due to Date.now()
-      // But for this session, we'll try to use stable IDs.
-      alert("데이터가 갱신되어 이전 오답 정보를 찾을 수 없습니다. 새로운 시험부터 기록됩니다.");
+      showToast("데이터가 갱신되어 이전 오답 정보를 찾을 수 없습니다. 새로운 시험부터 기록됩니다.");
       return;
     }
 
@@ -368,9 +327,8 @@ const App: React.FC = () => {
       // If limitCount is provided, treat the exam as having only that many questions
       const finalQuestions = limitCount ? quizQuestions.slice(0, limitCount) : quizQuestions;
 
-      const wrongCount = finalQuestions.filter(q => answers[q.id] !== q.answer).length;
       const wrongQuestions = finalQuestions.filter(q => answers[q.id] !== q.answer);
-      const correctCount = finalQuestions.length - wrongCount;
+      const correctCount = finalQuestions.length - wrongQuestions.length;
       const score = Math.round((correctCount / finalQuestions.length) * 100);
       const isPass = score >= 72;
       const timeTakenSeconds = (config.timeLimitMinutes * 60) - timeLeft;
@@ -456,11 +414,11 @@ const App: React.FC = () => {
         )}
 
         {stage === AppStage.STUDY && (
-          <Study onBack={handleBackToMenu} userTier={userTier} />
+          <Study onBack={handleBackToMenu} userTier={userTier} showToast={showToast} />
         )}
 
         {stage === AppStage.HISTORY && (
-          <History onBack={handleBackToMenu} userId={userHash} />
+          <History onBack={handleBackToMenu} userId={userHash} datasets={datasets} />
         )}
 
         {stage === AppStage.SETUP && (
@@ -551,6 +509,16 @@ const App: React.FC = () => {
           </footer>
         )
       }
+
+      {/* Global Toast Message */}
+      {toastMsg && (
+        <div className="fixed top-8 left-0 w-full z-[200] flex justify-center pointer-events-none">
+          <div className="animate-slideUp pointer-events-auto bg-indigo-600/95 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl border border-white/20 flex items-center gap-3">
+            <Bot className="w-5 h-5 text-indigo-200" />
+            {toastMsg}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

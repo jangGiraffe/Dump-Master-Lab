@@ -7,15 +7,16 @@ import { ChevronLeft, FileText, ExternalLink } from 'lucide-react';
 interface StudyProps {
   onBack: () => void;
   userTier: UserTier | null;
+  showToast: (msg: string) => void;
 }
 
-export const Study: React.FC<StudyProps> = ({ onBack, userTier }) => {
+export const Study: React.FC<StudyProps> = ({ onBack, userTier, showToast }) => {
   useEffect(() => {
     if (userTier !== 'V') {
-      alert('VIP 회원만 이용 가능한 서비스입니다.');
+      showToast('VIP 회원만 이용 가능한 서비스입니다.');
       onBack();
     }
-  }, [userTier, onBack]);
+  }, [userTier, onBack, showToast]);
 
   const [selectedPdf, setSelectedPdf] = useState(pdfDocuments[0] || null);
   // Default to showing the list on mobile

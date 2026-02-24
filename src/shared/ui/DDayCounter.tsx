@@ -222,8 +222,8 @@ export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, userTier, clas
         <div className="relative">
             {/* Toast Notification Layer */}
             {toastMsg && (
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-[100] animate-slideUp">
-                    <div className="bg-indigo-600/90 backdrop-blur-md text-white px-5 py-2 rounded-full text-xs font-bold shadow-2xl border border-white/20 whitespace-nowrap">
+                <div className="absolute -top-12 left-0 w-full z-[100] flex justify-center pointer-events-none">
+                    <div className="animate-slideUp pointer-events-auto bg-indigo-600/90 backdrop-blur-md text-white px-5 py-2 rounded-full text-xs font-bold shadow-2xl border border-white/20 whitespace-nowrap">
                         {toastMsg}
                     </div>
                 </div>

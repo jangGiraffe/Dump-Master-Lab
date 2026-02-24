@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Dataset, Question, UserTier, QuizConfig } from '@/shared/model/types';
-import { Settings, Play, ChevronLeft, ChevronRight, BookOpen, Info } from 'lucide-react';
+import { Settings, Play, ChevronLeft, ChevronRight, BookOpen, Info, Bot } from 'lucide-react';
 import { examService } from '@/shared/api/examService';
 
 interface SetupProps {
@@ -29,6 +29,12 @@ export const Setup: React.FC<SetupProps> = ({
   const [timeLimit, setTimeLimit] = useState<number>(120);
   const [maxQuestions, setMaxQuestions] = useState<number>(0);
   const [isManualCount, setIsManualCount] = useState<boolean>(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
 
   // Derive available exams and enrich with ExamService
   const exams = useMemo(() => {
@@ -77,7 +83,7 @@ export const Setup: React.FC<SetupProps> = ({
 
   const handleExamClick = (exam: typeof exams[0]) => {
     if (!exam.hasData) {
-      alert(`[${exam.code}] 시험은 현재 준비 중입니다.\n데이터가 업데이트되는 대로 이용 가능합니다.`);
+      showToast(`[${exam.code}] 시험은 현재 준비 중입니다. 데이터가 업데이트되는 대로 이용 가능합니다.`);
       return;
     }
     setSelectedExam(exam.code);
@@ -563,6 +569,16 @@ export const Setup: React.FC<SetupProps> = ({
           </div>
         )}
       </div>
+
+      {/* Global Toast Message */}
+      {toastMsg && (
+        <div className="fixed top-8 left-0 w-full z-[200] flex justify-center pointer-events-none">
+          <div className="animate-slideUp pointer-events-auto bg-indigo-600/95 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl border border-white/20 flex items-center gap-3">
+            <Bot className="w-5 h-5 text-indigo-200" />
+            {toastMsg}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

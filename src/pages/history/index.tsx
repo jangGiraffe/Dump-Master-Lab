@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
-import { HistoryRecord } from '@/shared/model/types';
+import { HistoryRecord, Dataset, Question } from '@/shared/model/types';
 import { historyService } from '@/shared/api/historyService';
 import { examService } from '@/shared/api/examService';
 import { dataSources } from '@/shared/api/dataService';
-import { formatTime, ResultCharacter } from '@/shared/lib/utils';
-import { ChevronLeft, ChevronDown, Trash2, Calendar, Award, Clock, BarChart2, BarChart3, BookOpen, Target, Cloud, RefreshCw } from 'lucide-react';
+import { formatTime, ResultCharacter, processRawQuestions } from '@/shared/lib/utils';
+import { ChevronLeft, ChevronDown, Trash2, Calendar, Award, Clock, BarChart2, BarChart3, BookOpen, Target, Cloud, RefreshCw, Eye, X, AlertCircle, Copy, Bot } from 'lucide-react';
 
 interface HistoryProps {
     onBack: () => void;
     userId?: string;
+    datasets: Dataset[];
 }
 
 const StatTooltip: React.FC<{ children: React.ReactNode; text: string; className?: string; align?: 'left' | 'center' | 'right' }> = ({ children, text, className, align = 'center' }) => (
@@ -26,7 +27,7 @@ const StatTooltip: React.FC<{ children: React.ReactNode; text: string; className
 
 const DashboardCard: React.FC<{ title: string; subtitle?: string; value: string | number; unit?: string; icon: React.ReactNode; color: string; delay?: string; tooltip?: string }> = ({ title, subtitle, value, unit, icon, color, delay, tooltip }) => {
     const content = (
-        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-5 border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow duration-200 animate-slideIn w-full ${delay || ''}`}>
+        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-5 border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow duration-200 animate-slideIn w-full h-full ${delay || ''}`}>
             <div className="flex items-center justify-between mb-4">
                 <div className={`p-2.5 rounded-xl ${color} bg-opacity-10`}>
                     {React.cloneElement(icon as React.ReactElement, { className: `w-6 h-6 ${color.replace('bg-', 'text-')}` })}
@@ -37,15 +38,15 @@ const DashboardCard: React.FC<{ title: string; subtitle?: string; value: string 
             </div>
             <div>
                 <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1 uppercase tracking-tight">{title}</p>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-gray-800 dark:text-white tabular-nums">{value}</span>
+                <div className="flex items-baseline gap-1 flex-wrap">
+                    <span className={`${String(value).length > 6 ? 'text-xl' : 'text-2xl'} font-black text-gray-800 dark:text-white tabular-nums leading-tight`}>{value}</span>
                     {unit && <span className="text-sm font-bold text-gray-400 dark:text-slate-500">{unit}</span>}
                 </div>
             </div>
         </div>
     );
 
-    return tooltip ? <StatTooltip text={tooltip} className="w-full flex-1">{content}</StatTooltip> : content;
+    return tooltip ? <StatTooltip text={tooltip} className="w-full h-full flex-1">{content}</StatTooltip> : content;
 };
 
 const ExamPerformanceCard: React.FC<{
@@ -91,13 +92,12 @@ const ExamPerformanceCard: React.FC<{
 );
 
 const ExamGroupCard: React.FC<{
-    groupName: string;
-    total: { avgScore: number; totalSolved: number; passRate: number; attempts: number; };
-    childrenStats: { name: string; avgScore: number; totalSolved: number; passRate: number; attempts: number; }[];
     delay?: string;
-}> = ({ groupName, total, childrenStats, delay }) => {
+    onDeleteGroup?: (ids: string[], name: string) => void;
+}> = ({ groupName, total, childrenStats, delay, onDeleteGroup }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const hasChildren = childrenStats.length > 0;
+    const recordIds = total.recordIds;
 
     return (
         <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slideIn transition-all ${isExpanded ? '' : 'overflow-hidden'} ${delay || ''}`}>
@@ -137,6 +137,18 @@ const ExamGroupCard: React.FC<{
                         <div className="p-2 shrink-0 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 transition-colors group-hover:bg-gray-200 dark:group-hover:bg-slate-600">
                             <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                         </div>
+                    )}
+                    {onDeleteGroup && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteGroup(recordIds, groupName);
+                            }}
+                            className="p-2 shrink-0 rounded-full hover:bg-rose-50 dark:hover:bg-rose-900/30 text-gray-300 dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 transition-colors"
+                            title={`[${groupName}] 모든 기록 삭제`}
+                        >
+                            <Trash2 className="w-4 h-4 md:w-5 h-5" />
+                        </button>
                     )}
                 </div>
             </div>
@@ -225,9 +237,37 @@ const ActivityHeatmap: React.FC<{ records: HistoryRecord[] }> = ({ records }) =>
     );
 };
 
-export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
+export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets }) => {
     const [records, setRecords] = useState<HistoryRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedRecordForDetails, setSelectedRecordForDetails] = useState<HistoryRecord | null>(null);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [copiedBulk, setCopiedBulk] = useState(false);
+    const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+    const showToast = (msg: string) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(null), 3000);
+    };
+
+    // 퀴즈 문제 매핑 (상세 보기를 위해)
+    const allQuestionsMap = React.useMemo(() => {
+        if (!datasets) return {};
+        const map: Record<string, Question> = {};
+        datasets.forEach(ds => {
+            let originalData: any[] | undefined = undefined;
+            if (ds.url && ds.url.endsWith('_KR.json')) {
+                const originalUrl = ds.url.replace('_KR.json', '.json');
+                const originalDataset = datasets.find(d => d.url === originalUrl);
+                if (originalDataset) originalData = originalDataset.data;
+            }
+            const processed = processRawQuestions(ds.data, ds.id, originalData);
+            processed.forEach(q => {
+                map[q.id] = q;
+            });
+        });
+        return map;
+    }, [datasets]);
 
     const loadRecords = async () => {
         setIsLoading(true);
@@ -275,7 +315,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
     const getExamStats = (recordList: HistoryRecord[]) => {
         const map: Record<string, {
             groupName: string;
-            total: { totalQ: number; correctC: number; attempts: number; passC: number },
+            total: { totalQ: number; correctC: number; attempts: number; passC: number, recordIds: string[] },
             sub: Record<string, { totalQ: number; correctC: number; attempts: number; passC: number }>,
             lastTimestamp: number;
         }> = {};
@@ -287,10 +327,11 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
             const groupCode = sources.every(s => !s) ? '미분류' : Array.from(new Set(sources.filter(Boolean).map(s => s?.examCode || '미분류'))).join(' / ');
 
             if (!map[groupCode]) {
-                map[groupCode] = { groupName: groupCode, total: { totalQ: 0, correctC: 0, attempts: 0, passC: 0 }, sub: {}, lastTimestamp: 0 };
+                map[groupCode] = { groupName: groupCode, total: { totalQ: 0, correctC: 0, attempts: 0, passC: 0, recordIds: [] }, sub: {}, lastTimestamp: 0 };
             }
 
             // 그룹 전체(Total) 통계 누적
+            map[groupCode].total.recordIds.push(r.id);
             map[groupCode].total.totalQ += r.totalQuestions;
             map[groupCode].total.correctC += r.correctCount;
             map[groupCode].total.attempts += 1;
@@ -349,6 +390,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                     totalSolved: totalToDistribute,
                     passRate: group.total.attempts > 0 ? Math.round((group.total.passC / group.total.attempts) * 100) : 0,
                     attempts: group.total.attempts,
+                    recordIds: group.total.recordIds
                 },
                 childrenStats: rawChildren.sort((a, b) => b.attempts - a.attempts),
                 lastTimestamp: group.lastTimestamp
@@ -404,33 +446,54 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (confirm('이 기록을 삭제하시겠습니까?')) {
-            await historyService.deleteRecord(id);
-            await loadRecords();
+        if (window.confirm('이 기록을 삭제하시겠습니까?')) {
+            try {
+                await historyService.deleteRecord(id);
+                showToast('기록이 삭제되었습니다.');
+                await loadRecords();
+            } catch (err) {
+                console.error('Failed to delete record:', err);
+                showToast('기록 삭제에 실패했습니다. 서버 연결을 확인해주세요.');
+            }
+        }
+    };
+
+    const handleDeleteGroup = async (ids: string[], name: string) => {
+        if (window.confirm(`[${name}]의 모든 기록(${ids.length}개)을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+            try {
+                setIsLoading(true);
+                await historyService.deleteRecords(ids);
+                showToast(`[${name}]의 모든 기록이 삭제되었습니다.`);
+                await loadRecords();
+            } catch (err) {
+                console.error('Failed to delete group:', err);
+                showToast('기록 삭제에 실패했습니다. 서버 연결을 확인해주세요.');
+                setIsLoading(false);
+            }
         }
     };
 
     const handleSync = async () => {
         if (!userId) {
-            alert('로그인 후 이용 가능합니다.');
+            showToast('로그인 후 이용 가능합니다.');
             return;
         }
 
         const localRecords = historyService.getLocalRecords();
         if (localRecords.length === 0) {
-            alert('동기화할 로컬 데이터가 없습니다.');
+            showToast('동기화할 로컬 데이터가 없습니다.');
             return;
         }
 
-        if (confirm('로컬에 저장된 이력을 서버로 동기화하시겠습니까?')) {
+        if (window.confirm('로컬에 저장된 이력을 서버로 동기화하시겠습니까?')) {
             setIsLoading(true);
             try {
                 const count = await historyService.syncLocalToCloud(userId);
-                alert(`${count}개의 새로운 기록이 서버로 동기화되었습니다.`);
+                showToast(`${count}개의 새로운 기록이 서버로 동기화되었습니다.`);
                 await loadRecords();
             } catch (e) {
                 console.error(e);
-                alert('동기화 중 오류가 발생했습니다.');
+                showToast('동기화 중 오류가 발생했습니다.');
             } finally {
                 setIsLoading(false);
             }
@@ -562,6 +625,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                                     key={group.groupName}
                                                     {...group}
                                                     delay={`animate-slideInStagger${(idx % 3) + 1}`}
+                                                    onDeleteGroup={handleDeleteGroup}
                                                 />
                                             ))}
                                         </div>
@@ -619,6 +683,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                                 key={group.groupName}
                                                 {...group}
                                                 delay={`animate-slideInStagger${(idx % 3) + 1}`}
+                                                onDeleteGroup={handleDeleteGroup}
                                             />
                                         ))}
                                     </div>
@@ -703,10 +768,18 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex md:block self-end md:self-center">
+                                                        <div className="flex flex-wrap md:flex-row items-center gap-2 self-end md:self-center">
+                                                            <button
+                                                                onClick={() => setSelectedRecordForDetails(record)}
+                                                                className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-300 rounded-lg transition-all text-[11px] font-bold border border-gray-200 dark:border-slate-600 hover:border-indigo-200 shadow-sm"
+                                                                title="틀린 문제 보기"
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                                틀린 문제 보기
+                                                            </button>
                                                             <button
                                                                 onClick={(e) => handleDelete(record.id, e)}
-                                                                className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors md:ml-2"
+                                                                className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                                                                 title="삭제"
                                                             >
                                                                 <Trash2 className="w-5 h-5" />
@@ -796,10 +869,18 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex md:block self-end md:self-center">
+                                                        <div className="flex flex-wrap md:flex-row items-center gap-2 self-end md:self-center">
+                                                            <button
+                                                                onClick={() => setSelectedRecordForDetails(record)}
+                                                                className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-300 rounded-lg transition-all text-[11px] font-bold border border-gray-200 dark:border-slate-600 hover:border-indigo-200 shadow-sm"
+                                                                title="틀린 문제 보기"
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                                상세 보기
+                                                            </button>
                                                             <button
                                                                 onClick={(e) => handleDelete(record.id, e)}
-                                                                className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors md:ml-2"
+                                                                className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                                                                 title="삭제"
                                                             >
                                                                 <Trash2 className="w-5 h-5" />
@@ -816,6 +897,195 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId }) => {
                     )
                 }
             </div >
+
+            {/* Wrong Questions Detail Modal */}
+            {selectedRecordForDetails && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-white dark:bg-slate-800 w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slideIn">
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-white dark:bg-slate-800">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                    <AlertCircle className="w-5 h-5 text-indigo-500" />
+                                    틀린 문제 상세 검토
+                                </h3>
+                                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                                    {resolveExamGroupId(selectedRecordForDetails.examNames)} • {formatDate(selectedRecordForDetails.timestamp)}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {(() => {
+                                    const wrongIds = selectedRecordForDetails.wrongQuestionIds || [];
+                                    const detailedQuestions = wrongIds.map(id => allQuestionsMap[id]).filter(Boolean);
+                                    if (detailedQuestions.length > 0) {
+                                        return (
+                                            <button
+                                                onClick={() => {
+                                                    const wrongQuestionsText = detailedQuestions.map((q, idx) => `
+문제 ${idx + 1}: ${q.question}
+답: ${q.answer}
+해설: ${q.explanation}
+`).join('\n---\n');
+                                                    const examCodes = Array.from(new Set(detailedQuestions.map(q => q.sourceVersion || '')));
+                                                    const prompt = `다음은 내가 틀린 문제들이다. [${examCodes.join(', ')}] 시험의 기출문제들이야. 이 문제들과 비슷한 유형의 퀴즈를 내줘:\n\n${wrongQuestionsText}`;
+                                                    navigator.clipboard.writeText(prompt).then(() => {
+                                                        setCopiedBulk(true);
+                                                        showToast("클립보드에 복사되었습니다! 제미나이나 ChatGPT 등에 붙여넣어 질문해보세요.");
+                                                        setTimeout(() => setCopiedBulk(false), 2000);
+                                                    });
+                                                }}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${copiedBulk ? 'bg-emerald-600 text-white' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800'}`}
+                                            >
+                                                <Copy className="w-3.5 h-3.5" />
+                                                {copiedBulk ? "복사 완료!" : "전체 AI 유사문제 요청"}
+                                            </button>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+                                <button
+                                    onClick={() => setSelectedRecordForDetails(null)}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors text-gray-400"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-gray-50/30 dark:bg-slate-900/20">
+                            {(() => {
+                                const wrongIds = selectedRecordForDetails.wrongQuestionIds || [];
+                                const detailedQuestions = wrongIds
+                                    .map(id => allQuestionsMap[id])
+                                    .filter(Boolean);
+
+                                if (wrongIds.length === 0) {
+                                    return (
+                                        <div className="py-12 text-center">
+                                            <div className="inline-flex p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl mb-4">
+                                                <Award className="w-10 h-10 text-emerald-500" />
+                                            </div>
+                                            <h4 className="text-lg font-bold text-gray-800 dark:text-white">틀린 문제가 없습니다!</h4>
+                                            <p className="text-sm text-gray-500 max-w-xs mx-auto mt-2">만점입니다. 완벽하게 이해하고 계시네요!</p>
+                                        </div>
+                                    );
+                                }
+
+                                if (detailedQuestions.length === 0 && wrongIds.length > 0) {
+                                    return (
+                                        <div className="py-12 text-center">
+                                            <div className="inline-flex p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl mb-4">
+                                                <Cloud className="w-10 h-10 text-amber-500" />
+                                            </div>
+                                            <h4 className="text-lg font-bold text-gray-800 dark:text-white">문제 데이트를 찾을 수 없습니다</h4>
+                                            <p className="text-sm text-gray-500 max-w-xs mx-auto mt-2">
+                                                이전 데이터 버전이거나 현재 로드된 문제 은행에 해당 문제가 포함되어 있지 않습니다.
+                                            </p>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <div className="space-y-6">
+                                        <p className="text-sm font-medium text-gray-500 dark:text-slate-400 border-l-4 border-indigo-500 pl-3">
+                                            총 {detailedQuestions.length}개의 틀린 문제를 검토합니다.
+                                        </p>
+                                        {detailedQuestions.map((q, idx) => (
+                                            <div key={q.id} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                                                <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
+                                                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Question {idx + 1}</span>
+                                                    <span className="text-[10px] px-2 py-0.5 bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-md font-bold uppercase">{q.sourceVersion}</span>
+                                                </div>
+                                                <div className="p-5">
+                                                    <p className="text-sm md:text-base font-bold text-gray-800 dark:text-white mb-6 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+
+                                                    <div className="space-y-2 mb-6">
+                                                        {q.options.map((opt, i) => {
+                                                            const label = opt.split('.')[0].trim();
+                                                            const isCorrect = q.answer.includes(label);
+                                                            return (
+                                                                <div
+                                                                    key={i}
+                                                                    className={`p-3 rounded-lg border text-sm transition-colors ${isCorrect
+                                                                        ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-medium'
+                                                                        : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 text-gray-600 dark:text-slate-400'
+                                                                        }`}
+                                                                >
+                                                                    {opt}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    <div className="bg-amber-50 dark:bg-amber-900/10 rounded-xl p-4 border border-amber-100 dark:border-amber-900/20 mb-4">
+                                                        <div className="flex items-center gap-2 mb-2 text-amber-700 dark:text-amber-400">
+                                                            <BookOpen className="w-4 h-4" />
+                                                            <span className="text-xs font-bold uppercase tracking-tight">해설 (Explanation)</span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                                                            {q.explanation}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex justify-start">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const getFullText = (labels: string) => {
+                                                                    if (!q.options || q.options.length === 0) return labels;
+                                                                    const labelArr = labels.split('').map(s => s.trim());
+                                                                    const matched = q.options
+                                                                        .filter(opt => labelArr.includes(opt.split('.')[0].trim()))
+                                                                        .map(opt => opt.replace(/^[A-Z]\.\s*/, ''));
+                                                                    return matched.length > 0 ? matched.join(', ') : labels;
+                                                                };
+                                                                const correctText = getFullText(q.answer);
+                                                                const allOptionsText = q.options.map(opt => opt.replace(/^[A-Z]\.\s*/, '')).join('\n');
+                                                                const text = `${q.question} 에 대한 답은 ${correctText} 이야. 이 문제에 대해 상세히 설명해주고, 관련 개념과 시험 대비 팁도 알려줘.\n다른 선택지는\n${allOptionsText} \n 이 있어.`;
+
+                                                                navigator.clipboard.writeText(text).then(() => {
+                                                                    setCopiedId(q.id);
+                                                                    showToast("클립보드에 복사되었습니다! 제미나이나 ChatGPT 등에 붙여넣어 질문해보세요.");
+                                                                    setTimeout(() => setCopiedId(null), 2000);
+                                                                });
+                                                            }}
+                                                            className={`flex items-center text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all shadow-sm ${copiedId === q.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600'} `}
+                                                        >
+                                                            <Copy className="w-3.5 h-3.5 mr-1.5" />
+                                                            {copiedId === q.id ? "복사 완료!" : "AI에게 질문하기 복사"}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex justify-end">
+                            <button
+                                onClick={() => setSelectedRecordForDetails(null)}
+                                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-95 text-sm"
+                            >
+                                확인 완료
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Global Toast Message */}
+            {toastMsg && (
+                <div className="fixed top-8 left-0 w-full z-[200] flex justify-center pointer-events-none">
+                    <div className="animate-slideUp pointer-events-auto bg-indigo-600/95 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl border border-white/20 flex items-center gap-3">
+                        <Bot className="w-5 h-5 text-indigo-200" />
+                        {toastMsg}
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
