@@ -66,7 +66,6 @@ export const Setup: React.FC<SetupProps> = ({
       }
     });
 
-    // If Boss Raid, further filter out exams that have NO wrong answers
     if (isBossRaid && wrongQuestionIds.length > 0) {
       return list.filter(exam => {
         if (!exam.hasData) return false;
@@ -75,10 +74,18 @@ export const Setup: React.FC<SetupProps> = ({
         return examDatasets.some(ds => {
           return ds.data.some((_, idx) => wrongQuestionIds.includes(`${ds.id}-${idx}`));
         });
+      }).sort((a, b) => {
+        if (a.hasData && !b.hasData) return -1;
+        if (!a.hasData && b.hasData) return 1;
+        return 0;
       });
     }
 
-    return list;
+    return list.sort((a, b) => {
+      if (a.hasData && !b.hasData) return -1;
+      if (!a.hasData && b.hasData) return 1;
+      return 0;
+    });
   }, [datasets, isBossRaid, wrongQuestionIds]);
 
   const handleExamClick = (exam: typeof exams[0]) => {

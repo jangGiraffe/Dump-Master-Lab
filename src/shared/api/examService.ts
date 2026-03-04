@@ -23,7 +23,7 @@ export const examsInfo: Record<string, ExamInfo> = {
         name: 'AWS Certified Machine Learning - Specialty',
         description: '기계 학습 아키텍처 설계, 구현 및 고도화 능력을 검증하는 시험입니다.',
         category: 'AWS Certification',
-        officialTimeLimitMinutes: 180,
+        officialTimeLimitMinutes: 140,
         officialQuestionCount: 65
     },
     'SAMPLE': {
@@ -57,6 +57,14 @@ export const examsInfo: Record<string, ExamInfo> = {
         category: 'AWS Certification',
         officialTimeLimitMinutes: 130,
         officialQuestionCount: 65
+    },
+    'DOP-C02': {
+        code: 'DOP-C02',
+        name: 'AWS Certified DevOps Engineer - Professional',
+        description: '분산 애플리케이션 시스템 운영 및 관리, 배포 자동화 능력을 검증하는 전문가급 시험입니다.',
+        category: 'AWS Certification',
+        officialTimeLimitMinutes: 180,
+        officialQuestionCount: 75
     },
     'SOA-C02': {
         code: 'SOA-C02',

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Question } from '@/shared/model/types';
 import { formatTime } from '@/shared/lib/utils';
-import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown, Pause, Play, Bot } from 'lucide-react';
+import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown, Pause, Play, Bot, Monitor } from 'lucide-react';
 import { QuizTutorial } from './ui/QuizTutorial';
 import { RandomQuote } from '@/shared/ui/RandomQuote';
 
@@ -26,6 +26,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const [isPaused, setIsPaused] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [unansweredCount, setUnansweredCount] = useState(0);
+  const [isAwsMode, setIsAwsMode] = useState(false);
 
   // Use ref to track if quiz is finished to prevent multiple submissions
   const isFinishedRef = useRef(false);
@@ -449,12 +450,12 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
   // Render Component
   return (
-    <div className="flex flex-col flex-grow bg-gray-50 dark:bg-slate-900 min-h-0 overflow-hidden transition-colors duration-300">
+    <div className={`flex flex-col flex-grow min-h-0 overflow-hidden ${isAwsMode ? 'bg-[#c0c0c0] text-black font-sans' : 'bg-gray-50 dark:bg-slate-900 transition-colors duration-300'}`}>
       {/* Tutorial Modal */}
       {showTutorial && <QuizTutorial onStart={() => setShowTutorial(false)} />}
 
       {/* Header */}
-      <header className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 px-4 py-3 sticky top-0 z-10 shadow-sm flex justify-between items-center shrink-0 transition-colors duration-300">
+      <header className={`px-4 py-3 sticky top-0 z-10 flex flex-wrap gap-3 justify-between items-center shrink-0 ${isAwsMode ? 'bg-[#c0c0c0] border-b-[3px] border-b-[#ffffff] shadow-[0_3px_0_0_#808080]' : 'bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm transition-colors duration-300'}`}>
 
         {/* Swipe Feedback Overlay - Left (Previous) */}
         {touchOffset > 10 && currentIdx > 0 && (
@@ -510,51 +511,63 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
           </div>
         )}
 
-        <div className="flex items-center space-x-4">
-          <div className={`flex items-center font-mono font-medium text-lg ${timeLeft < 300 ? 'text-danger animate-pulse' : 'text-gray-700 dark:text-slate-200'}`}>
-            <Clock className="w-5 h-5 mr-2" />
-            {formatTime(timeLeft)}
+        <div className="flex items-center space-x-2 md:space-x-4">
+          <div className={`flex items-center font-mono font-medium text-sm md:text-lg ${isAwsMode ? 'text-black font-bold p-1 border-2 border-[#808080] bg-white shadow-[1px_1px_0_0_#ffffff_inset,-1px_-1px_0_0_#ffffff_inset]' : (timeLeft < 300 ? 'text-danger animate-pulse' : 'text-gray-700 dark:text-slate-200')}`}>
+            {isAwsMode ? null : <Clock className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />}
+            {isAwsMode ? `Time Remaining: ${formatTime(timeLeft)}` : formatTime(timeLeft)}
           </div>
           <button
             onClick={() => setIsPaused(true)}
-            className="p-2 text-gray-500 hover:text-primary transition-colors hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full relative group"
+            className="p-1.5 md:p-2 text-gray-500 hover:text-primary transition-colors hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full relative group"
             title="일시중지 (P)"
           >
-            <Pause className="w-5 h-5" />
+            <Pause className="w-4 h-4 md:w-5 md:h-5" />
             <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
               일시중지 (P)
             </span>
           </button>
-          <div className="hidden sm:block text-sm text-gray-500 dark:text-slate-400">
+          <div className="hidden lg:block text-sm text-gray-500 dark:text-slate-400">
             문제 {currentIdx + 1} / {questions.length}
           </div>
         </div>
 
         {/* Centered Exam Code */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
-          {examCodes.length > 0 && (
-            <div className="flex items-center space-x-2">
-              <span className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase border border-primary/20 dark:border-primary/40 shadow-sm animate-fadeIn">
-                {examCodes.join(' & ')}
-              </span>
+        {!isAwsMode && (
+          <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 flex-col items-center pointer-events-none">
+            {examCodes.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <span className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase border border-primary/20 dark:border-primary/40 shadow-sm animate-fadeIn">
+                  {examCodes.join(' & ')}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center shrink-0">
+          {!isAwsMode && (
+            <div className="w-24 lg:w-32 bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 mr-3 lg:mr-4 hidden md:block">
+              <div
+                className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
+              ></div>
             </div>
           )}
-        </div>
-
-        <div className="flex items-center">
-          <div className="w-32 bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 mr-4 hidden sm:block">
-            <div
-              className="bg-primary h-2.5 rounded-full transition-all duration-300"
-              style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
-            ></div>
-          </div>
           <button
             onClick={handleFinish}
-            className="bg-success hover:bg-green-600 text-white text-sm font-semibold py-1.5 px-4 rounded transition-colors"
+            className={`text-xs md:text-sm py-1.5 px-3 md:px-4 transition-colors shrink-0 ${isAwsMode ? 'font-bold bg-[#c0c0c0] text-black border-[3px] border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]' : 'font-semibold bg-success hover:bg-green-600 text-white rounded'}`}
           >
             시험 제출
           </button>
-          <div className="ml-4">
+          <div className="ml-2 flex items-center space-x-2">
+            <button
+              onClick={() => setIsAwsMode(!isAwsMode)}
+              className={`text-xs md:text-sm py-1.5 px-3 md:px-4 transition-colors shrink-0 ${isAwsMode ? 'font-bold bg-[#c0c0c0] text-black border-[3px] border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]' : 'font-semibold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded hover:bg-gray-200 dark:hover:bg-slate-600'}`}
+              title="AWS 실전 모드 토글"
+            >
+              <span className="hidden sm:inline">{isAwsMode ? '일반 모드' : 'AWS 실전 모드'}</span>
+              <span className="sm:hidden">{isAwsMode ? '일반' : 'AWS 실전'}</span>
+            </button>
             <ThemeToggle />
           </div>
         </div>
@@ -563,21 +576,24 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       {/* Main Content */}
       <main
         ref={mainRef}
-        className="flex-grow min-h-0 px-4 py-8 md:p-8 max-w-4xl mx-auto w-full outline-none overflow-y-auto"
+        className={`flex-grow min-h-0 px-4 py-8 md:p-8 w-full outline-none overflow-y-auto ${isAwsMode ? 'max-w-none' : 'max-w-4xl mx-auto'}`}
         tabIndex={0}
       >
         <div className="pb-16 md:pb-20"> {/* Margin to ensure content isn't covered by footer */}
           <div
             key={animationKey}
-            className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 md:p-10 animate-slideIn transition-colors duration-300"
+            className={isAwsMode ? "bg-white border-2 border-[#000000] p-6 md:p-10 shadow-[2px_2px_0_0_#808080] w-full" : "bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 md:p-10 animate-slideIn transition-colors duration-300 max-w-4xl mx-auto"}
           >
+
 
             <div className="flex justify-between items-start mb-4">
               <div className="flex flex-wrap gap-2 mb-2">
-                <span className="inline-block bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                  Source: {currentQ.sourceVersion}
-                </span>
-                {wrongCountMap[currentQ.id] > 0 && (
+                {!isAwsMode && (
+                  <span className="inline-block bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Source: {currentQ.sourceVersion}
+                  </span>
+                )}
+                {!isAwsMode && wrongCountMap[currentQ.id] > 0 && (
                   <span className="inline-block bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse flex items-center">
                     <AlertTriangle className="w-3 h-3 mr-1" />
                     누적 {wrongCountMap[currentQ.id]}회 오답
@@ -586,11 +602,12 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
               </div>
             </div>
 
-            <h2 className="text-lg md:text-xl font-medium text-gray-900 dark:text-slate-100 mb-6 leading-relaxed whitespace-pre-wrap">
+            <h2 className={`text-lg md:text-xl font-medium mb-6 leading-relaxed whitespace-pre-wrap ${isAwsMode ? 'text-black font-bold font-serif' : 'text-gray-900 dark:text-slate-100'}`}>
+              {isAwsMode && `${currentIdx + 1}. `}
               {showOriginal && currentQ.originalQuestion ? currentQ.originalQuestion : currentQ.question}
               {currentQ.answer.length > 1 && (
-                <span className="ml-2 inline-block bg-blue-100 dark:bg-blue-900/30 text-primary dark:text-blue-300 text-[10px] px-1.5 py-0.5 rounded align-middle font-bold border border-blue-200 dark:border-blue-800">
-                  복수 선택 ({currentQ.answer.length}개)
+                <span className={`ml-2 inline-block px-1.5 py-0.5 align-middle border ${isAwsMode ? 'bg-black text-white text-[11px] font-bold border-black uppercase' : 'bg-blue-100 dark:bg-blue-900/30 text-primary dark:text-blue-300 text-[10px] rounded font-bold border-blue-200 dark:border-blue-800'}`}>
+                  {isAwsMode ? `Choose ${currentQ.answer.length}` : `복수 선택 (${currentQ.answer.length}개)`}
                 </span>
               )}
             </h2>
@@ -619,8 +636,9 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                       key={idx}
                       onClick={() => handleSelectOption(label)}
                       className={`
-                      relative p-3 md:p-4 border rounded-lg cursor-pointer transition-all flex items-start group
-                      ${isSelected ? 'border-primary bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-700/50'}
+                      relative p-3 md:p-4 border transition-all flex items-start group cursor-pointer
+                      ${isAwsMode ? 'rounded-none mb-2 border-[#000000]' : 'rounded-lg mb-0'}
+                      ${isSelected ? (isAwsMode ? 'bg-[#cccccc]' : 'border-primary bg-blue-50 dark:bg-blue-900/20') : (isAwsMode ? 'bg-white hover:bg-[#e0e0e0]' : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-700/50')}
                     `}
                     >
                       <div className="absolute right-3 top-3 hidden md:block opacity-0 group-hover:opacity-30 transition-opacity">
@@ -630,12 +648,13 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                       </div>
 
                       <div className={`
-                      w-5 h-5 rounded-full border flex items-center justify-center mr-3 flex-shrink-0 mt-0.5
-                      ${isSelected ? 'border-primary bg-primary text-white' : 'border-gray-300 dark:border-slate-500 text-gray-500 dark:text-slate-400'}
+                      w-5 h-5 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5
+                      ${isAwsMode ? (currentQ.answer.length > 1 ? 'rounded-none border-2 border-black bg-white shadow-[-1px_-1px_0_0_#808080_inset]' : 'rounded-full border-2 border-black bg-white shadow-[-1px_-1px_0_0_#808080_inset]') : 'rounded-full border'}
+                      ${isSelected ? (isAwsMode ? '' : 'border-primary bg-primary text-white') : (isAwsMode ? '' : 'border-gray-300 dark:border-slate-500 text-gray-500 dark:text-slate-400')}
                     `}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                        {isSelected && <div className={isAwsMode ? (currentQ.answer.length > 1 ? "w-3 h-3 bg-black" : "w-2.5 h-2.5 bg-black rounded-full") : "w-2 h-2 bg-white rounded-full"} />}
                       </div>
-                      <span className="text-sm md:text-base text-gray-700 dark:text-slate-200 leading-snug">
+                      <span className={`text-sm md:text-base leading-snug ${isAwsMode ? 'text-black font-medium font-serif' : 'text-gray-700 dark:text-slate-200'}`}>
                         {(showOriginal && currentQ.originalOptions && currentQ.originalOptions[idx])
                           ? stripLabel(currentQ.originalOptions[idx])
                           : stripLabel(opt)
@@ -648,18 +667,20 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
             )}
 
             {/* Explanation & Copy Actions */}
-            <div className="border-t dark:border-slate-700 pt-4">
+            <div className={`border-t dark:border-slate-700 pt-4 ${isAwsMode ? 'border-t-black' : ''}`}>
               <div className="flex items-center flex-wrap gap-y-3 gap-x-4 mb-4">
-                <button
-                  onClick={() => setShowExplanation(!showExplanation)}
-                  className="flex items-center text-primary dark:text-blue-400 font-medium hover:text-blue-700 dark:hover:text-blue-300 transition-colors text-sm md:text-base group"
-                >
-                  <HelpCircle className="w-5 h-5 mr-2" />
-                  <span>{showExplanation ? "해설 숨기기" : "해설 보기"}</span>
-                  <span className="ml-2 text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-600 font-mono inline-block group-hover:bg-gray-200 dark:group-hover:bg-slate-600">
-                    S
-                  </span>
-                </button>
+                {!isAwsMode && (
+                  <button
+                    onClick={() => setShowExplanation(!showExplanation)}
+                    className="flex items-center text-primary dark:text-blue-400 font-medium hover:text-blue-700 dark:hover:text-blue-300 transition-colors text-sm md:text-base group"
+                  >
+                    <HelpCircle className="w-5 h-5 mr-2" />
+                    <span>{showExplanation ? "해설 숨기기" : "해설 보기"}</span>
+                    <span className="ml-2 text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-600 font-mono inline-block group-hover:bg-gray-200 dark:group-hover:bg-slate-600">
+                      S
+                    </span>
+                  </button>
+                )}
 
                 {currentQ.originalQuestion && (
                   <button
@@ -674,17 +695,19 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                   </button>
                 )}
 
-                <button
-                  onClick={handleCopyQuestion}
-                  className="flex items-center text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 transition-colors text-sm md:text-base group"
-                  title="AI에게 질문하기 위해 문제와 답 복사"
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  <span>AI 질문 복사</span>
-                  <span className="ml-2 text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-600 font-mono inline-block group-hover:bg-gray-200 dark:group-hover:bg-slate-600">
-                    V
-                  </span>
-                </button>
+                {!isAwsMode && (
+                  <button
+                    onClick={handleCopyQuestion}
+                    className="flex items-center text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 transition-colors text-sm md:text-base group"
+                    title="AI에게 질문하기 위해 문제와 답 복사"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    <span>AI 질문 복사</span>
+                    <span className="ml-2 text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-600 font-mono inline-block group-hover:bg-gray-200 dark:group-hover:bg-slate-600">
+                      V
+                    </span>
+                  </button>
+                )}
               </div>
 
               {showExplanation && (
@@ -720,12 +743,15 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       )}
 
       {/* Footer Navigation */}
-      <footer className="bg-white dark:bg-slate-800 border-t dark:border-slate-700 p-4 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] shrink-0 transition-colors duration-300">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
+      <footer className={`p-4 sticky bottom-0 z-10 flex-shrink-0 ${isAwsMode ? 'bg-[#c0c0c0] border-t-[3px] border-t-[#ffffff] shadow-[0_-3px_0_0_#808080]' : 'bg-white dark:bg-slate-800 border-t dark:border-slate-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300'}`}>
+        <div className={`flex justify-between items-center ${isAwsMode ? 'w-full px-4' : 'max-w-4xl mx-auto'}`}>
           <button
             onClick={handlePrev}
             disabled={currentIdx === 0}
-            className={`flex items-center px-4 py-2 rounded font-medium text-sm group transition-colors ${currentIdx === 0 ? 'text-gray-300 dark:text-slate-600' : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`}
+            className={`flex items-center px-4 py-2 font-medium text-sm transition-colors ${isAwsMode
+              ? `border-[3px] font-bold ${currentIdx === 0 ? 'bg-[#c0c0c0] text-gray-500 border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] cursor-not-allowed opacity-50' : 'bg-[#c0c0c0] text-black border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]'}`
+              : `rounded group ${currentIdx === 0 ? 'text-gray-300 dark:text-slate-600' : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`
+              }`}
           >
             <ChevronLeft className="w-5 h-5 mr-1" />
             <div className="flex flex-col items-start">
@@ -740,7 +766,10 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
           <button
             onClick={handleNext}
-            className={`flex items-center px-4 py-2 rounded font-medium text-sm group transition-colors ${currentIdx === questions.length - 1 ? 'text-primary dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20' : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`}
+            className={`flex items-center px-4 py-2 font-medium text-sm transition-colors ${isAwsMode
+              ? `border-[3px] font-bold bg-[#c0c0c0] text-black border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]`
+              : `rounded group ${currentIdx === questions.length - 1 ? 'text-primary dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20' : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`
+              }`}
           >
             <div className="flex flex-col items-end">
               <span>{currentIdx === questions.length - 1 ? '제출' : '다음'}</span>
