@@ -30,6 +30,7 @@ export const Setup: React.FC<SetupProps> = ({
   const [maxQuestions, setMaxQuestions] = useState<number>(0);
   const [isManualCount, setIsManualCount] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [isAwsMode, setIsAwsMode] = useState<boolean>(false);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -229,7 +230,8 @@ export const Setup: React.FC<SetupProps> = ({
     onStart({
       selectedVersions,
       questionCount: Math.min(questionCount, maxQuestions),
-      timeLimitMinutes: timeLimit
+      timeLimitMinutes: timeLimit,
+      isAwsMode
     });
   };
 
@@ -556,6 +558,21 @@ export const Setup: React.FC<SetupProps> = ({
                   className="w-full px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 dark:placeholder-slate-500 text-sm"
                 />
               </div>
+            </div>
+
+            {/* AWS Exam Mode Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600 mt-6">
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">AWS 실전 모드</h4>
+                <p className="text-xs text-gray-500 dark:text-slate-400">실제 AWS 시험 환경과 유사한 테마로 진행합니다.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAwsMode(!isAwsMode)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isAwsMode ? 'bg-primary' : 'bg-gray-300 dark:bg-slate-600'}`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isAwsMode ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
             </div>
 
             <div className="pt-4 border-t border-gray-100 dark:border-slate-700">

@@ -12,9 +12,10 @@ interface QuizProps {
   onComplete: (userAnswers: Record<string, string>, timeLeft: number, limitCount?: number) => void;
   wrongCountMap?: Record<string, number>;
   examCodes?: string[];
+  initialAwsMode?: boolean;
 }
 
-export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onComplete, wrongCountMap = {}, examCodes = [] }) => {
+export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onComplete, wrongCountMap = {}, examCodes = [], initialAwsMode = false }) => {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(timeLimitMinutes * 60);
@@ -26,7 +27,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const [isPaused, setIsPaused] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [unansweredCount, setUnansweredCount] = useState(0);
-  const [isAwsMode, setIsAwsMode] = useState(false);
+  const [isAwsMode, setIsAwsMode] = useState(initialAwsMode);
 
   // Use ref to track if quiz is finished to prevent multiple submissions
   const isFinishedRef = useRef(false);

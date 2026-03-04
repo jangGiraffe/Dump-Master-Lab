@@ -15,6 +15,7 @@ export interface QuizConfig {
   selectedVersions: string[];
   questionCount: number;
   timeLimitMinutes: number;
+  isAwsMode?: boolean;
 }
 
 export interface QuizState {

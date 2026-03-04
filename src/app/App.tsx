@@ -452,6 +452,7 @@ const App: React.FC = () => {
               });
               return map;
             })()}
+            initialAwsMode={config.isAwsMode}
           />
         )}
 
