@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Question } from '@/shared/model/types';
 import { formatTime } from '@/shared/lib/utils';
-import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown, Pause, Play, Bot, Monitor } from 'lucide-react';
+import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown, Pause, Play, Bot, Monitor, Type, Plus, Minus } from 'lucide-react';
 import { QuizTutorial } from './ui/QuizTutorial';
 import { RandomQuote } from '@/shared/ui/RandomQuote';
 
@@ -28,6 +28,9 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [unansweredCount, setUnansweredCount] = useState(0);
   const [isAwsMode, setIsAwsMode] = useState(initialAwsMode);
+  const [fontSize, setFontSize] = useState(() => {
+    return localStorage.getItem('quiz_font_size') || 'base';
+  });
 
   // Use ref to track if quiz is finished to prevent multiple submissions
   const isFinishedRef = useRef(false);
@@ -128,6 +131,17 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       }, 100);
     }
   }, [showExplanation]);
+
+  useEffect(() => {
+    localStorage.setItem('quiz_font_size', fontSize);
+  }, [fontSize]);
+
+  const changeFontSize = (delta: number) => {
+    const sizes: ('xxs' | 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl')[] = ['xxs', 'xs', 'sm', 'base', 'lg', 'xl', '2xl'];
+    const currentIdx = sizes.indexOf(fontSize as any);
+    const nextIdx = Math.max(0, Math.min(sizes.length - 1, currentIdx + delta));
+    setFontSize(sizes[nextIdx]);
+  };
 
   // Handle Copy Question for AI
   const handleCopyQuestion = useCallback(async () => {
@@ -532,18 +546,95 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
           </div>
         </div>
 
-        {/* Centered Exam Code */}
-        {!isAwsMode && (
-          <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 flex-col items-center pointer-events-none">
-            {examCodes.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <span className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase border border-primary/20 dark:border-primary/40 shadow-sm animate-fadeIn">
-                  {examCodes.join(' & ')}
-                </span>
+        {/* Font Size & Centered Exam Code */}
+        <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center space-x-6">
+          <div className={`
+            flex items-center rounded-lg p-1 border gap-1 transition-all
+            ${isAwsMode 
+              ? 'bg-[#c0c0c0] border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] border-[3px] shadow-none rounded-none' 
+              : 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-slate-600 shadow-inner'}
+          `}>
+            <button
+              onClick={() => changeFontSize(-1)}
+              className={`
+                p-1 px-2 rounded transition-all disabled:opacity-30 disabled:cursor-not-allowed
+                ${isAwsMode 
+                  ? 'bg-[#c0c0c0] text-black border-2 border-transparent active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]' 
+                  : 'hover:bg-white dark:hover:bg-slate-600 text-gray-500 dark:text-slate-300'}
+              `}
+              title="글자 크기 줄이기"
+              disabled={fontSize === 'xxs'}
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            
+            <div className="flex items-center px-1">
+              <div className="flex gap-0.5">
+                {['xxs', 'xs', 'sm', 'base', 'lg', 'xl', '2xl'].map((s, idx) => (
+                  <div 
+                    key={s} 
+                    className={`
+                      w-1 h-3 rounded-full transition-all 
+                      ${fontSize === s 
+                        ? (isAwsMode ? 'bg-black h-4' : 'bg-indigo-600 h-4') 
+                        : (isAwsMode ? 'bg-[#808080]' : 'bg-gray-300 dark:bg-slate-600')}
+                    `}
+                  />
+                ))}
               </div>
-            )}
+            </div>
+
+            <button
+              onClick={() => changeFontSize(1)}
+              className={`
+                p-1 px-2 rounded transition-all disabled:opacity-30 disabled:cursor-not-allowed
+                ${isAwsMode 
+                  ? 'bg-[#c0c0c0] text-black border-2 border-transparent active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]' 
+                  : 'hover:bg-white dark:hover:bg-slate-600 text-gray-500 dark:text-slate-300'}
+              `}
+              title="글자 크기 키우기"
+              disabled={fontSize === '2xl'}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
           </div>
-        )}
+          {!isAwsMode && examCodes.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <span className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase border border-primary/20 dark:border-primary/40 shadow-sm animate-fadeIn">
+                {examCodes.join(' & ')}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Font Toggle - Step Up/Down */}
+        <div className={`
+          lg:hidden flex items-center mr-2 rounded-lg p-1 border gap-2 transition-all
+          ${isAwsMode 
+            ? 'bg-[#c0c0c0] border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] border-[3px] rounded-none' 
+            : 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-slate-600'}
+        `}>
+          <button
+            onClick={() => changeFontSize(-1)}
+            className={`
+              p-1 rounded active:bg-white dark:active:bg-slate-600
+              ${isAwsMode ? 'text-black font-bold' : 'text-gray-500'}
+            `}
+            disabled={fontSize === 'xxs'}
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => changeFontSize(1)}
+            className={`
+              p-1 rounded active:bg-white dark:active:bg-slate-600
+              ${isAwsMode ? 'text-black font-bold' : 'text-gray-500'}
+            `}
+            disabled={fontSize === '2xl'}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
 
         <div className="flex items-center shrink-0">
           {!isAwsMode && (
@@ -603,7 +694,17 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
               </div>
             </div>
 
-            <h2 className={`text-lg md:text-xl font-medium mb-6 leading-relaxed whitespace-pre-wrap ${isAwsMode ? 'text-black font-bold font-serif' : 'text-gray-900 dark:text-slate-100'}`}>
+            <h2 className={`
+              font-medium mb-6 leading-relaxed whitespace-pre-wrap transition-all duration-200
+              ${isAwsMode ? 'text-black font-bold font-serif' : 'text-gray-900 dark:text-slate-100'}
+              ${fontSize === 'xxs' ? 'text-[10px] md:text-xs' : ''}
+              ${fontSize === 'xs' ? 'text-xs md:text-sm' : ''}
+              ${fontSize === 'sm' ? 'text-sm md:text-base' : ''}
+              ${fontSize === 'base' ? 'text-base md:text-lg' : ''}
+              ${fontSize === 'lg' ? 'text-lg md:text-xl' : ''}
+              ${fontSize === 'xl' ? 'text-xl md:text-2xl' : ''}
+              ${fontSize === '2xl' ? 'text-2xl md:text-3xl' : ''}
+            `}>
               {isAwsMode && `${currentIdx + 1}. `}
               {showOriginal && currentQ.originalQuestion ? currentQ.originalQuestion : currentQ.question}
               {currentQ.answer.length > 1 && (
@@ -655,7 +756,17 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                     `}>
                         {isSelected && <div className={isAwsMode ? (currentQ.answer.length > 1 ? "w-3 h-3 bg-black" : "w-2.5 h-2.5 bg-black rounded-full") : "w-2 h-2 bg-white rounded-full"} />}
                       </div>
-                      <span className={`text-sm md:text-base leading-snug ${isAwsMode ? 'text-black font-medium font-serif' : 'text-gray-700 dark:text-slate-200'}`}>
+                      <span className={`
+                        leading-snug transition-all duration-200
+                        ${isAwsMode ? 'text-black font-medium font-serif' : 'text-gray-700 dark:text-slate-200'}
+                        ${fontSize === 'xxs' ? 'text-[8px] md:text-[10px]' : ''}
+                        ${fontSize === 'xs' ? 'text-[10px] md:text-xs' : ''}
+                        ${fontSize === 'sm' ? 'text-xs md:text-sm' : ''}
+                        ${fontSize === 'base' ? 'text-sm md:text-base' : ''}
+                        ${fontSize === 'lg' ? 'text-base md:text-lg' : ''}
+                        ${fontSize === 'xl' ? 'text-lg md:text-xl' : ''}
+                        ${fontSize === '2xl' ? 'text-xl md:text-2xl' : ''}
+                      `}>
                         {(showOriginal && currentQ.originalOptions && currentQ.originalOptions[idx])
                           ? stripLabel(currentQ.originalOptions[idx])
                           : stripLabel(opt)
