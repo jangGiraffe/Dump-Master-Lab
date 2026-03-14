@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Dataset, Question, UserTier, QuizConfig } from '@/shared/model/types';
-import { Settings, Play, ChevronLeft, ChevronRight, BookOpen, Info, Bot } from 'lucide-react';
+import { Settings, Play, ChevronLeft, ChevronRight, BookOpen, Info, Bot, Loader2 } from 'lucide-react';
 import { examService } from '@/shared/api/examService';
+import { dataSources } from '@/shared/api/dataService';
 
 interface SetupProps {
   datasets: Dataset[];
@@ -11,6 +12,8 @@ interface SetupProps {
   userTier: UserTier | null;
   isBossRaid?: boolean;
   wrongQuestionIds?: string[];
+  onLoadMoreData: (sourceIds: string[]) => Promise<Dataset[]>;
+  onClearCache?: () => void;
 }
 
 export const Setup: React.FC<SetupProps> = ({
@@ -19,7 +22,9 @@ export const Setup: React.FC<SetupProps> = ({
   onBack,
   userTier,
   isBossRaid = false,
-  wrongQuestionIds = []
+  wrongQuestionIds = [],
+  onLoadMoreData,
+  onClearCache
 }) => {
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
@@ -31,6 +36,7 @@ export const Setup: React.FC<SetupProps> = ({
   const [isManualCount, setIsManualCount] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isAwsMode, setIsAwsMode] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -39,7 +45,7 @@ export const Setup: React.FC<SetupProps> = ({
 
   // Derive available exams and enrich with ExamService
   const exams = useMemo(() => {
-    const datasetCodes = new Set(datasets.map(d => d.examCode || 'Uncategorized'));
+    const datasetCodes = new Set(dataSources.map(d => d.examCode || 'Uncategorized'));
     const allKnownExams = examService.getAllExams();
 
     // Start with all known exams from ExamService
@@ -70,11 +76,10 @@ export const Setup: React.FC<SetupProps> = ({
     if (isBossRaid && wrongQuestionIds.length > 0) {
       return list.filter(exam => {
         if (!exam.hasData) return false;
-        const examDatasets = datasets.filter(d => (d.examCode || 'Uncategorized') === exam.code);
-        // Check if any question in these datasets is in wrongQuestionIds
-        return examDatasets.some(ds => {
-          return ds.data.some((_, idx) => wrongQuestionIds.includes(`${ds.id}-${idx}`));
-        });
+        // For Boss Raid, we still rely on loaded datasets to count questions,
+        // so Boss Raid will work only for already loaded data or we need to pre-fetch.
+        // Actually, let's just allow clicking any exam.
+        return true; 
       }).sort((a, b) => {
         if (a.hasData && !b.hasData) return -1;
         if (!a.hasData && b.hasData) return 1;
@@ -87,14 +92,29 @@ export const Setup: React.FC<SetupProps> = ({
       if (!a.hasData && b.hasData) return 1;
       return 0;
     });
-  }, [datasets, isBossRaid, wrongQuestionIds]);
+  }, [isBossRaid, wrongQuestionIds]);
 
-  const handleExamClick = (exam: typeof exams[0]) => {
+  const handleExamClick = async (exam: typeof exams[0]) => {
     if (!exam.hasData) {
       showToast(`[${exam.code}] 시험은 현재 준비 중입니다. 데이터가 업데이트되는 대로 이용 가능합니다.`);
       return;
     }
-    setSelectedExam(exam.code);
+    
+    setIsLoading(true);
+    try {
+      // Find all sources for this exam
+      const sourcesForExam = dataSources
+        .filter(s => (s.examCode || 'Uncategorized') === exam.code)
+        .map(s => s.id);
+      
+      await onLoadMoreData(sourcesForExam);
+      setSelectedExam(exam.code);
+    } catch (err) {
+      console.error("Failed to load exam data:", err);
+      showToast("데이터를 불러오지 못했습니다. 네트워크를 확인해주세요.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Filter datasets by selected exam
@@ -262,6 +282,12 @@ export const Setup: React.FC<SetupProps> = ({
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
               {isBossRaid ? '오답 문제풀이 설정' : '시험 설정'}
             </h2>
+            {isLoading && (
+              <div className="ml-4 flex items-center gap-2 text-indigo-600 animate-pulse">
+                <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-xs font-bold">문제를 다운로드중입니다...</span>
+              </div>
+            )}
           </div>
 
 
@@ -286,12 +312,27 @@ export const Setup: React.FC<SetupProps> = ({
               </div>
             )}
             <ThemeToggle />
+            {onClearCache && (
+              <button 
+                onClick={onClearCache}
+                className="p-2 ml-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors text-gray-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400"
+                title="데이터 새로고침 (캐시 삭제)"
+              >
+                <Bot className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
 
         {!selectedExam ? (
           /* Step 1: Exam Selection */
-          <div className="space-y-6">
+          <div className="space-y-6 relative">
+            {isLoading && (
+              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg animate-fadeIn">
+                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-3" />
+                <p className="text-sm font-bold text-indigo-600">문제를 다운로드중입니다...</p>
+              </div>
+            )}
             <h3 className="text-lg font-medium text-gray-700 dark:text-slate-300">시험 선택</h3>
             <div className="grid grid-cols-1 gap-4">
               {exams.map(exam => (

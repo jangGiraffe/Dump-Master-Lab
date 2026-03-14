@@ -26,13 +26,13 @@ export const examsInfo: Record<string, ExamInfo> = {
         officialTimeLimitMinutes: 140,
         officialQuestionCount: 65
     },
-    'SAMPLE': {
-        code: 'SAMPLE',
-        name: 'Sample Exam Questions',
-        description: '체험하기 및 일반 회원을 위한 무료 샘플 문제 모음입니다.',
-        category: 'Practice',
-        officialTimeLimitMinutes: 30,
-        officialQuestionCount: 10
+    'AIP-C01': {
+        code: 'AIP-C01',
+        name: 'AWS Certified Generative AI Developer - Professional',
+        description: 'AWS 환경에서 생성형 AI 기반 솔루션을 설계, 통합 및 유지 관리하는 전문가급 능력을 검증합니다.',
+        category: 'AWS Certification',
+        officialTimeLimitMinutes: 215,
+        officialQuestionCount: 85
     },
     'CLF-C02': {
         code: 'CLF-C02',
@@ -73,6 +73,14 @@ export const examsInfo: Record<string, ExamInfo> = {
         category: 'AWS Certification',
         officialTimeLimitMinutes: 130,
         officialQuestionCount: 65
+    },
+    'SAMPLE': {
+        code: 'SAMPLE',
+        name: 'Sample Exam Questions',
+        description: '체험하기 및 일반 회원을 위한 무료 샘플 문제 모음입니다.',
+        category: 'Practice',
+        officialTimeLimitMinutes: 30,
+        officialQuestionCount: 10
     }
 };
 

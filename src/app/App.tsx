@@ -12,6 +12,7 @@ import { historyService } from '@/shared/api/historyService';
 import { shuffleArray, processRawQuestions, authenticateUser } from '@/shared/lib/utils';
 import { APP_CONFIG } from '@/shared/config';
 import { Loader2, AlertCircle, Bot } from 'lucide-react';
+import { cacheService } from '@/shared/api/cacheService';
 // Import crypto-js for decryption
 import CryptoJS from 'crypto-js';
 
@@ -46,9 +47,9 @@ const App: React.FC = () => {
       try {
         const { tier, password, timestamp } = JSON.parse(savedSession);
 
-        // 1. Check if session is expired (12 hours)
-        const TWELVE_HOURS = 12 * 60 * 60 * 1000;
-        const isExpired = !timestamp || (Date.now() - timestamp > TWELVE_HOURS);
+        // 1. Check if session is expired (1 year)
+        const ONE_YEAR = 365 * 24 * 60 * 60 * 1000;
+        const isExpired = !timestamp || (Date.now() - timestamp > ONE_YEAR);
 
         if (isExpired) {
           console.log("Session expired, logging out...");
@@ -82,69 +83,111 @@ const App: React.FC = () => {
     restoreSession();
   }, []);
 
-  const loadData = async (tier: UserTier, password?: string) => {
-    setStage(AppStage.LOADING);
-    setError('');
+  const fetchDatasets = async (sourceIds: string[]): Promise<Dataset[]> => {
+    // 1. Identify what's missing in memory
+    const missingInMemory = dataSources.filter(s => 
+      sourceIds.includes(s.id) && !datasets.find(d => d.id === s.id)
+    );
 
-    // Fallback key if not provided (should be provided for secure tiers)
-    // Note: In a real scenario, password should be passed securely. 
-    // Here we use the user's password input as the decryption key.
-    // Use the environment variable for decryption key
-    // This requires the key to be prefixed with VITE_ in .env file
+    if (missingInMemory.length === 0) return datasets;
+
     const decryptionKey = import.meta.env.VITE_DATA_ENCRYPTION_KEY || '';
+    
+    // 2. Try to get missing ones from Persistent Cache (IndexedDB)
+    const cachedResults = await Promise.all(
+      missingInMemory.map(async (source) => {
+        const cached = await cacheService.get(source.id);
+        if (cached) {
+          // Version Check Logic: If server version exists and higher than cached version, force refresh
+          const serverVersion = source.version || 1;
+          const cachedVersion = cached.version || 1;
 
-    try {
-      // Filter data sources based on tier
-      const availableSources = dataSources.filter(source => {
-        // Default to 'N' access if not specified (backward compatibility)
-        const reqs = source.requiredTier || ['N'];
-        // Check if user's tier is in the allowed list
-        return reqs.includes(tier);
-      });
-
-      const loadedDatasets: Dataset[] = await Promise.all(
-        availableSources.map(async (source: DataSource) => {
-          try {
-            const response = await fetch(source.url);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const rawData = await response.json();
-
-            // Decrypt logic
-            let data = rawData;
-            if (source.isEncrypted && decryptionKey) {
-              const ciphertext = rawData.encryptedData || rawData.payload || rawData;
-              const bytes = CryptoJS.AES.decrypt(ciphertext, decryptionKey);
-              const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-              data = decryptedData;
-            }
-
-            return {
-              id: source.id,
-              name: source.name,
-              data: data,
-              examCode: source.examCode,
-              url: source.url
-            };
-          } catch (e) {
-            console.error(`Failed to load ${source.url}`, e);
-            return {
-              id: source.id,
-              name: source.name,
-              data: [],
-              examCode: source.examCode,
-              url: source.url
-            };
+          if (serverVersion > cachedVersion) {
+            console.log(`[Cache] Update available for ${source.id}: Server(${serverVersion}) > Cache(${cachedVersion})`);
+            return null; // Trigger network fetch
           }
-        })
-      );
 
-      setDatasets(loadedDatasets.filter(d => d.data.length > 0));
-      setStage(AppStage.MENU);
-    } catch (e) {
-      console.error("Failed to load datasets", e);
-      setError('데이터를 불러오는 중 오류가 발생했습니다. 라이선스 키를 확인해주세요.');
-      setStage(AppStage.LOADING);
+          console.log(`[Cache] Loaded persistently: ${source.id} (v${cachedVersion})`);
+          return cached;
+        }
+        return null;
+      })
+    );
+
+    // 3. For those truly missing or outdated, fetch from network
+    const trulyMissingSources = missingInMemory.filter((_, idx) => !cachedResults[idx]);
+
+    const networkLoaded = await Promise.all(
+      trulyMissingSources.map(async (source) => {
+        try {
+          console.log(`[Network] Fetching: ${source.url}`);
+          const response = await fetch(source.url);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            const text = await response.text();
+            console.error(`Expected JSON but got ${contentType}. Body snippet: ${text.substring(0, 100)}`);
+            throw new Error(`Invalid content type: ${contentType}. The file might be missing or the path is incorrect.`);
+          }
+
+          const rawData = await response.json();
+
+          let data = rawData;
+          if (source.isEncrypted && decryptionKey) {
+            const ciphertext = rawData.encryptedData || rawData.payload || rawData;
+            const bytes = CryptoJS.AES.decrypt(ciphertext, decryptionKey);
+            const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+            if (!decryptedString) throw new Error("Decryption failed - empty result");
+            data = JSON.parse(decryptedString);
+          }
+
+          const dataset: Dataset = {
+            id: source.id,
+            name: source.name,
+            data: data,
+            examCode: source.examCode,
+            url: source.url,
+            version: source.version || 1 // Store current version
+          };
+
+          // Save to persistent cache
+          await cacheService.set(source.id, dataset);
+          return dataset;
+        } catch (e) {
+          console.error(`Failed to load ${source.url}`, e);
+          return null;
+        }
+      })
+    );
+
+    // Combine everything
+    const newValidDatasets = [
+      ...cachedResults.filter((d): d is Dataset => d !== null),
+      ...networkLoaded.filter((d): d is Dataset => d !== null)
+    ];
+
+    if (newValidDatasets.length > 0) {
+      console.log(`[Cache] Successfully resolved ${newValidDatasets.length} datasets.`);
     }
+
+    const updatedDatasets = [...datasets, ...newValidDatasets];
+    setDatasets(updatedDatasets);
+    return updatedDatasets;
+  };
+
+  const handleClearCache = async () => {
+    if (window.confirm("모든 저장된 문제 데이터를 삭제하고 서버에서 다시 받으시겠습니까?")) {
+      await cacheService.clear();
+      setDatasets([]);
+      showToast("데이터가 초기화되었습니다. 다음 시험 시작 시 새로 다운로드합니다.");
+    }
+  };
+
+  const loadData = async (tier: UserTier) => {
+    // In lazy loading mode, we just transition to MENU.
+    // We can pre-load metadata if needed, but for now we trust dataSources.
+    setStage(AppStage.MENU);
   };
 
   const handleLogin = (tier: UserTier, userId?: string, password?: string) => {
@@ -160,7 +203,7 @@ const App: React.FC = () => {
       timestamp: Date.now()
     }));
 
-    loadData(tier, password);
+    loadData(tier);
 
     // Initial sync
     historyService.syncLocalToCloud(finalUserId).catch(err => {
@@ -199,17 +242,25 @@ const App: React.FC = () => {
   };
 
   const handleStartBossRaid = async () => {
+    setStage(AppStage.LOADING);
     const records = await historyService.getRecords(userHash);
     const allWrongIds = Array.from(new Set(records.flatMap(r => r.wrongQuestionIds || [])));
 
     if (allWrongIds.length === 0) {
+      setStage(AppStage.MENU);
       showToast("정복할 보스가 없습니다! (아직 틀린 문제가 없습니다. 먼저 모의고사를 풀어보세요.)");
       return;
     }
 
+    // Determine which datasets contain these wrong IDs
+    // Since we don't know which dataset has which ID without loading, 
+    // for Boss Raid we might need to load all available sources for the tier.
+    const availableSourceIds = dataSources.filter(s => s.requiredTier?.includes(userTier || 'G')).map(s => s.id);
+    const currentDatasets = await fetchDatasets(availableSourceIds);
+
     // 1. Process all datasets to get all possible questions
     let allAvailableQuestions: Question[] = [];
-    datasets.forEach(ds => {
+    currentDatasets.forEach(ds => {
       let originalData: any[] | undefined = undefined;
       if (ds.url && ds.url.endsWith('_KR.json')) {
         const originalUrl = ds.url.replace('_KR.json', '.json');
@@ -262,11 +313,15 @@ const App: React.FC = () => {
     setIsRetry(false);
   };
 
-  const handleStartQuiz = (newConfig: QuizConfig) => {
+  const handleStartQuiz = async (newConfig: QuizConfig) => {
+    setStage(AppStage.LOADING);
     setConfig(newConfig);
 
-    // 1. Filter datasets based on selection
-    const selectedData = datasets.filter(ds => newConfig.selectedVersions.includes(ds.id));
+    // 1. Load selected datasets on demand
+    const currentDatasets = await fetchDatasets(newConfig.selectedVersions);
+
+    // 2. Filter datasets based on selection
+    const selectedData = currentDatasets.filter(ds => newConfig.selectedVersions.includes(ds.id));
 
     // 2. Process raw data into Question objects with IDs
     let allQuestionsPool: Question[] = [];
@@ -393,8 +448,8 @@ const App: React.FC = () => {
         ) : (
           <div className="flex flex-col items-center">
             <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-            <p className="text-lg font-medium">시험 데이터 로딩 중...</p>
-            <p className="text-sm text-gray-500 mt-2">문제 은행 준비 중</p>
+            <p className="text-lg font-medium">문제를 다운로드중입니다...</p>
+            <p className="text-sm text-gray-500 mt-2">잠시만 기다려주세요</p>
           </div>
         )}
       </div>
@@ -417,10 +472,6 @@ const App: React.FC = () => {
           <Study onBack={handleBackToMenu} userTier={userTier} showToast={showToast} />
         )}
 
-        {stage === AppStage.HISTORY && (
-          <History onBack={handleBackToMenu} userId={userHash} datasets={datasets} />
-        )}
-
         {stage === AppStage.SETUP && (
           <Setup
             datasets={datasets}
@@ -429,6 +480,17 @@ const App: React.FC = () => {
             userTier={userTier}
             isBossRaid={isBossRaid}
             wrongQuestionIds={bossRaidWrongIds}
+            onLoadMoreData={fetchDatasets}
+            onClearCache={handleClearCache}
+          />
+        )}
+
+        {stage === AppStage.HISTORY && (
+          <History 
+            onBack={handleBackToMenu} 
+            userId={userHash} 
+            datasets={datasets} 
+            onLoadMoreData={fetchDatasets}
           />
         )}
 

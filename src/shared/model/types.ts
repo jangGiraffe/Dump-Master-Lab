@@ -65,6 +65,7 @@ export interface DataSource {
   url?: string;
   data?: any[]; // Pre-loaded data
   isEncrypted?: boolean;
+  version?: number;
 }
 
 export interface Dataset extends DataSource {

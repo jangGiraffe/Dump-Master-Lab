@@ -11,6 +11,7 @@ interface HistoryProps {
     onBack: () => void;
     userId?: string;
     datasets: Dataset[];
+    onLoadMoreData: (sourceIds: string[]) => Promise<Dataset[]>;
 }
 
 const StatTooltip: React.FC<{ children: React.ReactNode; text: string; className?: string; align?: 'left' | 'center' | 'right' }> = ({ children, text, className, align = 'center' }) => (
@@ -237,7 +238,7 @@ const ActivityHeatmap: React.FC<{ records: HistoryRecord[] }> = ({ records }) =>
     );
 };
 
-export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets }) => {
+export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLoadMoreData }) => {
     const [records, setRecords] = useState<HistoryRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedRecordForDetails, setSelectedRecordForDetails] = useState<HistoryRecord | null>(null);
@@ -456,6 +457,23 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets }) =>
                 showToast('기록 삭제에 실패했습니다. 서버 연결을 확인해주세요.');
             }
         }
+    };
+
+    const handleViewDetails = async (record: HistoryRecord) => {
+        // Before showing modal, ensure the datasets are loaded
+        const missingIds = record.examNames.filter(id => !datasets.find(d => d.id === id));
+        if (missingIds.length > 0) {
+            setIsLoading(true);
+            try {
+                await onLoadMoreData(missingIds);
+            } catch (err) {
+                console.error("Failed to load details", err);
+                showToast("데이터를 불러오지 못했습니다.");
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        setSelectedRecordForDetails(record);
     };
 
     const handleDeleteGroup = async (ids: string[], name: string) => {
@@ -770,7 +788,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets }) =>
 
                                                         <div className="flex flex-wrap md:flex-row items-center gap-2 self-end md:self-center">
                                                             <button
-                                                                onClick={() => setSelectedRecordForDetails(record)}
+                                                                onClick={() => handleViewDetails(record)}
                                                                 className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-300 rounded-lg transition-all text-[11px] font-bold border border-gray-200 dark:border-slate-600 hover:border-indigo-200 shadow-sm"
                                                                 title="틀린 문제 보기"
                                                             >
@@ -871,7 +889,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets }) =>
 
                                                         <div className="flex flex-wrap md:flex-row items-center gap-2 self-end md:self-center">
                                                             <button
-                                                                onClick={() => setSelectedRecordForDetails(record)}
+                                                                onClick={() => handleViewDetails(record)}
                                                                 className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-300 rounded-lg transition-all text-[11px] font-bold border border-gray-200 dark:border-slate-600 hover:border-indigo-200 shadow-sm"
                                                                 title="틀린 문제 보기"
                                                             >
