@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Question } from '@/shared/model/types';
 import { formatTime } from '@/shared/lib/utils';
-import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown, Pause, Play, Bot, Monitor, Type, Plus, Minus } from 'lucide-react';
+import { Clock, HelpCircle, ChevronLeft, ChevronRight, AlertTriangle, Copy, Languages, ChevronUp, ChevronDown, Pause, Play, Bot, Monitor, Type, Plus, Minus, Check, X, GraduationCap } from 'lucide-react';
 import { QuizTutorial } from './ui/QuizTutorial';
 import { RandomQuote } from '@/shared/ui/RandomQuote';
 
@@ -13,12 +13,16 @@ interface QuizProps {
   wrongCountMap?: Record<string, number>;
   examCodes?: string[];
   initialAwsMode?: boolean;
+  mode?: 'quiz' | 'practice';
 }
 
-export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onComplete, wrongCountMap = {}, examCodes = [], initialAwsMode = false }) => {
+export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onComplete, wrongCountMap = {}, examCodes = [], initialAwsMode = false, mode = 'quiz' }) => {
+  const isPractice = mode === 'practice';
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [timeLeft, setTimeLeft] = useState(timeLimitMinutes * 60);
+  const [timeLeft, setTimeLeft] = useState(isPractice ? 0 : timeLimitMinutes * 60);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [isAnswerChecked, setIsAnswerChecked] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [showTutorial, setShowTutorial] = useState(true);
   const [showToast, setShowToast] = useState(false);
@@ -58,7 +62,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
     if (options?.force) {
       isFinishedRef.current = true;
-      onComplete(answers, timeLeft, options.limitCount);
+      onComplete(answers, isPractice ? -timeElapsed : timeLeft, options.limitCount);
       return;
     }
 
@@ -71,15 +75,15 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     });
     const missing = unansweredQuestions.length;
 
-    if (missing > 0) {
+    if (!isPractice && missing > 0) {
       setUnansweredCount(missing);
       setShowSubmitModal(true);
       return;
     }
 
     isFinishedRef.current = true;
-    onComplete(answers, timeLeft);
-  }, [answers, timeLeft, onComplete, questions]);
+    onComplete(answers, isPractice ? -timeElapsed : timeLeft, isPractice ? currentIdx + 1 : undefined);
+  }, [answers, timeLeft, timeElapsed, isPractice, onComplete, questions, currentIdx]);
 
   // Timer Effect - Separate from handleFinish to avoid stale closures
   useEffect(() => {
@@ -87,6 +91,10 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
     if (isFinishedRef.current) return;
 
     const timer = setInterval(() => {
+      if (isPractice) {
+        setTimeElapsed(prev => prev + 1);
+        return;
+      }
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
@@ -117,10 +125,10 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
   // Watch for time running out
   useEffect(() => {
-    if (timeLeft === 0 && !isFinishedRef.current && !showTutorial) {
+    if (!isPractice && timeLeft === 0 && !isFinishedRef.current && !showTutorial) {
       handleFinish();
     }
-  }, [timeLeft, handleFinish, showTutorial]);
+  }, [timeLeft, handleFinish, showTutorial, isPractice]);
 
   // Auto-scroll to explanation when it opens
   useEffect(() => {
@@ -179,7 +187,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
   // Handle Answer Selection
   const handleSelectOption = useCallback((optionLabel: string) => {
-    if (isFinishedRef.current) return;
+    if (isFinishedRef.current || (isPractice && isAnswerChecked)) return;
     const currentQ = questions[currentIdx];
     const isMultiple = currentQ.answer.length > 1;
 
@@ -208,7 +216,29 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
         };
       }
     });
-  }, [questions, currentIdx]);
+  }, [questions, currentIdx, isPractice, isAnswerChecked]);
+
+  const handleCheckAnswer = useCallback(() => {
+    const currentQ = questions[currentIdx];
+    const selectedAnswer = answers[currentQ.id];
+
+    if (!selectedAnswer || selectedAnswer.length === 0) {
+      setToastMsg("정답을 선택해주세요!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+
+    if (currentQ.answer.length > 1 && selectedAnswer.length !== currentQ.answer.length) {
+      setToastMsg(`정답을 ${currentQ.answer.length}개 선택해야 합니다!`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+
+    setIsAnswerChecked(true);
+    setShowExplanation(true);
+  }, [questions, currentIdx, answers]);
 
   // Navigation Handlers
   const handleNext = useCallback(() => {
@@ -227,19 +257,34 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       setCurrentIdx(prev => prev + 1);
       setShowExplanation(false);
       setShowOriginal(false);
+      setIsAnswerChecked(false);
       setAnimationKey(prev => prev + 1);
       // Reset scroll position
       if (mainRef.current) mainRef.current.scrollTop = 0;
     } else {
-      handleFinish();
+      if (isPractice) {
+        // Infinite Loop back to start
+        setCurrentIdx(0);
+        setShowExplanation(false);
+        setShowOriginal(false);
+        setIsAnswerChecked(false);
+        setAnimationKey(prev => prev + 1);
+        if (mainRef.current) mainRef.current.scrollTop = 0;
+        setToastMsg("첫 번째 문제로 돌아왔습니다. 무한 공부 모드!");
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 2000);
+      } else {
+        handleFinish();
+      }
     }
-  }, [currentIdx, questions, answers, handleFinish]);
+  }, [currentIdx, questions, answers, handleFinish, isPractice, isAnswerChecked]);
 
   const handlePrev = useCallback(() => {
     if (currentIdx > 0) {
       setCurrentIdx(prev => prev - 1);
       setShowExplanation(false);
       setShowOriginal(false);
+      setIsAnswerChecked(false); // Should we keep the check state? Probably better to reset for fresh study
       setAnimationKey(prev => prev + 1);
       // Reset scroll position
       if (mainRef.current) mainRef.current.scrollTop = 0;
@@ -290,7 +335,11 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
       // Navigation
       if (key === 'D' || key === 'ARROWRIGHT' || e.key === ' ') {
-        handleNext();
+        if (isPractice && !isAnswerChecked) {
+          handleCheckAnswer();
+        } else {
+          handleNext();
+        }
       } else if (key === 'A' || key === 'ARROWLEFT') {
         handlePrev();
       }
@@ -327,7 +376,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showTutorial, currentIdx, questions, handleNext, handlePrev, handleSelectOption, getOptionLabel, handleCopyQuestion]);
+  }, [showTutorial, currentIdx, questions, handleNext, handlePrev, handleSelectOption, getOptionLabel, handleCopyQuestion, isPractice, isAnswerChecked, handleCheckAnswer]);
 
   // Wheel Scroll Navigation
   useEffect(() => {
@@ -542,9 +591,9 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
         )}
 
         <div className="flex items-center space-x-2 md:space-x-4">
-          <div className={`flex items-center font-mono font-medium text-sm md:text-lg ${isAwsMode ? 'text-black font-bold p-1 border-2 border-[#808080] bg-white shadow-[1px_1px_0_0_#ffffff_inset,-1px_-1px_0_0_#ffffff_inset]' : (timeLeft < 300 ? 'text-danger animate-pulse' : 'text-gray-700 dark:text-slate-200')}`}>
-            {isAwsMode ? null : <Clock className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />}
-            {isAwsMode ? `Time Remaining: ${formatTime(timeLeft)}` : formatTime(timeLeft)}
+          <div className={`flex items-center font-mono font-medium text-sm md:text-lg ${isAwsMode ? 'text-black font-bold p-1 border-2 border-[#808080] bg-white shadow-[1px_1px_0_0_#ffffff_inset,-1px_-1px_0_0_#ffffff_inset]' : (isPractice ? 'text-amber-600 dark:text-amber-400' : (timeLeft < 300 ? 'text-danger animate-pulse' : 'text-gray-700 dark:text-slate-200'))}`}>
+            {isAwsMode ? null : (isPractice ? <GraduationCap className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" /> : <Clock className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />)}
+            {isAwsMode ? (isPractice ? `Study Time: ${formatTime(timeElapsed)}` : `Time Remaining: ${formatTime(timeLeft)}`) : (isPractice ? formatTime(timeElapsed) : formatTime(timeLeft))}
           </div>
           <button
             onClick={() => setIsPaused(true)}
@@ -557,7 +606,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
             </span>
           </button>
           <div className="hidden lg:block text-sm text-gray-500 dark:text-slate-400">
-            문제 {currentIdx + 1} / {questions.length}
+            문제 {currentIdx + 1}{!isPractice && ` / ${questions.length}`}
           </div>
         </div>
 
@@ -620,6 +669,14 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
               </span>
             </div>
           )}
+          {isPractice && (
+            <div className="flex items-center space-x-2 animate-pulse">
+              <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full text-xs font-bold tracking-tight border border-amber-200 dark:border-amber-800 shadow-sm flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5" />
+                공부모드 진행중
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Mobile Font Toggle - Step Up/Down */}
@@ -652,7 +709,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
         </div>
 
         <div className="flex items-center shrink-0">
-          {!isAwsMode && (
+          {!isAwsMode && !isPractice && (
             <div className="w-24 lg:w-32 bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 mr-3 lg:mr-4 hidden md:block">
               <div
                 className="bg-primary h-2.5 rounded-full transition-all duration-300"
@@ -662,9 +719,9 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
           )}
           <button
             onClick={handleFinish}
-            className={`text-xs md:text-sm py-1.5 px-3 md:px-4 transition-colors shrink-0 ${isAwsMode ? 'font-bold bg-[#c0c0c0] text-black border-[3px] border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]' : 'font-semibold bg-success hover:bg-green-600 text-white rounded'}`}
+            className={`text-xs md:text-sm py-1.5 px-3 md:px-4 transition-colors shrink-0 ${isAwsMode ? 'font-bold bg-[#c0c0c0] text-black border-[3px] border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]' : (isPractice ? 'font-semibold bg-amber-500 hover:bg-amber-600 text-white rounded' : 'font-semibold bg-success hover:bg-green-600 text-white rounded')}`}
           >
-            시험 제출
+            {isPractice ? '학습 종료' : '시험 제출'}
           </button>
           <div className="ml-2 flex items-center space-x-2">
             <button
@@ -767,9 +824,16 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                       <div className={`
                       w-5 h-5 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5
                       ${isAwsMode ? (currentQ.answer.length > 1 ? 'rounded-none border-2 border-black bg-white shadow-[-1px_-1px_0_0_#808080_inset]' : 'rounded-full border-2 border-black bg-white shadow-[-1px_-1px_0_0_#808080_inset]') : 'rounded-full border'}
-                      ${isSelected ? (isAwsMode ? '' : 'border-primary bg-primary text-white') : (isAwsMode ? '' : 'border-gray-300 dark:border-slate-500 text-gray-500 dark:text-slate-400')}
+                      ${isPractice && isAnswerChecked 
+                        ? (currentQ.answer.includes(label) 
+                          ? 'border-green-500 bg-green-500 text-white' 
+                          : (isSelected ? 'border-red-500 bg-red-500 text-white' : 'border-gray-300 dark:border-slate-500'))
+                        : (isSelected ? (isAwsMode ? '' : 'border-primary bg-primary text-white') : (isAwsMode ? '' : 'border-gray-300 dark:border-slate-500 text-gray-500 dark:text-slate-400'))}
                     `}>
-                        {isSelected && <div className={isAwsMode ? (currentQ.answer.length > 1 ? "w-3 h-3 bg-black" : "w-2.5 h-2.5 bg-black rounded-full") : "w-2 h-2 bg-white rounded-full"} />}
+                        {isPractice && isAnswerChecked 
+                          ? (currentQ.answer.includes(label) ? <Check className="w-3.5 h-3.5" /> : (isSelected ? <X className="w-3.5 h-3.5" /> : null))
+                          : (isSelected && <div className={isAwsMode ? (currentQ.answer.length > 1 ? "w-3 h-3 bg-black" : "w-2.5 h-2.5 bg-black rounded-full") : "w-2 h-2 bg-white rounded-full"} />)
+                        }
                       </div>
                       <span className={`
                         leading-snug transition-all duration-200
@@ -892,24 +956,34 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
           </button>
 
           <span className="text-sm font-medium text-gray-500 dark:text-slate-500 sm:hidden">
-            {currentIdx + 1} / {questions.length}
+            {currentIdx + 1}{!isPractice && ` / ${questions.length}`}
           </span>
 
-          <button
-            onClick={handleNext}
-            className={`flex items-center px-4 py-2 font-medium text-sm transition-colors ${isAwsMode
-              ? `border-[3px] font-bold bg-[#c0c0c0] text-black border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]`
-              : `rounded group ${currentIdx === questions.length - 1 ? 'text-primary dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20' : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`
-              }`}
-          >
-            <div className="flex flex-col items-end">
-              <span>{currentIdx === questions.length - 1 ? '제출' : '다음'}</span>
-              <span className={`text-[10px] font-normal block font-mono ${currentIdx === questions.length - 1 ? 'text-blue-300 dark:text-blue-500' : 'text-gray-400 dark:text-slate-500'}`}>
-                [D]
-              </span>
-            </div>
-            <ChevronRight className="w-5 h-5 ml-1" />
-          </button>
+          {isPractice && !isAnswerChecked ? (
+            <button
+              onClick={handleCheckAnswer}
+              className="px-8 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 flex items-center gap-2"
+            >
+              <Check className="w-5 h-5" />
+              정답 확인
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              className={`flex items-center px-4 py-2 font-medium text-sm transition-colors ${isAwsMode
+                ? `border-[3px] font-bold bg-[#c0c0c0] text-black border-t-[#ffffff] border-l-[#ffffff] border-r-[#808080] border-b-[#808080] active:border-t-[#808080] active:border-l-[#808080] active:border-r-[#ffffff] active:border-b-[#ffffff]`
+                : `rounded group ${currentIdx === questions.length - 1 ? 'text-primary dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20' : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`
+                }`}
+            >
+              <div className="flex flex-col items-end">
+                <span>{currentIdx === questions.length - 1 ? (isPractice ? '학습 종료' : '제출') : '다음'}</span>
+                <span className={`text-[10px] font-normal block font-mono ${currentIdx === questions.length - 1 ? 'text-blue-300 dark:text-blue-500' : 'text-gray-400 dark:text-slate-500'}`}>
+                  [D]
+                </span>
+              </div>
+              <ChevronRight className="w-5 h-5 ml-1" />
+            </button>
+          )}
         </div>
       </footer>
 

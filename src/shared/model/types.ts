@@ -16,6 +16,7 @@ export interface QuizConfig {
   questionCount: number;
   timeLimitMinutes: number;
   isAwsMode?: boolean;
+  mode?: 'quiz' | 'practice';
 }
 
 export interface QuizState {
@@ -33,6 +34,7 @@ export enum AppStage {
   MENU = 'MENU',
   SETUP = 'SETUP',
   STUDY = 'STUDY',
+  PRACTICE = 'PRACTICE',
   QUIZ = 'QUIZ',
   RESULT = 'RESULT',
   HISTORY = 'HISTORY',
@@ -51,6 +53,7 @@ export interface HistoryRecord {
   isRetry?: boolean;
   wrongQuestionIds?: string[]; // IDs of questions answered incorrectly
   userId?: string; // Identification for cross-device sync
+  mode?: 'quiz' | 'practice';
 }
 
 

@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [isRetry, setIsRetry] = useState(false);
   const [isBossRaid, setIsBossRaid] = useState(false);
+  const [isPractice, setIsPractice] = useState(false);
   const [bossRaidWrongIds, setBossRaidWrongIds] = useState<string[]>([]);
   const [userHash, setUserHash] = useState<string>('');
   const [timeTaken, setTimeTaken] = useState<number>(0);
@@ -224,9 +225,14 @@ const App: React.FC = () => {
     localStorage.removeItem(SESSION_KEY);
   };
 
-  const handleMenuSelect = async (mode: 'quiz' | 'study' | 'history' | 'boss-raid') => {
+  const handleMenuSelect = async (mode: 'quiz' | 'study' | 'history' | 'boss-raid' | 'practice') => {
     if (mode === 'quiz') {
       setIsBossRaid(false);
+      setIsPractice(false);
+      setStage(AppStage.SETUP);
+    } else if (mode === 'practice') {
+      setIsBossRaid(false);
+      setIsPractice(true);
       setStage(AppStage.SETUP);
     } else if (mode === 'study') {
       setStage(AppStage.STUDY);
@@ -306,7 +312,8 @@ const App: React.FC = () => {
     setConfig({
       questionCount: bossQuestions.length,
       timeLimitMinutes: Math.ceil(bossQuestions.length * 1.5), // 1.5 min per question
-      selectedVersions: Array.from(new Set(bossQuestions.map(q => q.sourceVersion || '')))
+      selectedVersions: Array.from(new Set(bossQuestions.map(q => q.sourceVersion || ''))),
+      mode: 'quiz'
     });
     setStage(AppStage.QUIZ);
   };
@@ -314,14 +321,19 @@ const App: React.FC = () => {
   const handleBackToMenu = () => {
     setStage(AppStage.MENU);
     // Reset quiz state if coming back from result/quiz
-    setUserAnswers({});
     setQuizQuestions([]);
     setIsRetry(false);
+    setIsPractice(false);
+    setIsBossRaid(false);
   };
 
   const handleStartQuiz = async (newConfig: QuizConfig) => {
     setStage(AppStage.LOADING);
-    setConfig(newConfig);
+    const finalConfig = {
+      ...newConfig,
+      mode: isPractice ? 'practice' : 'quiz'
+    };
+    setConfig(finalConfig);
 
     // 1. Identify all versions to fetch (including counterparts for translation)
     const versionsToFetch = new Set(newConfig.selectedVersions);
@@ -419,7 +431,7 @@ const App: React.FC = () => {
       const correctCount = finalQuestions.length - wrongQuestions.length;
       const score = Math.round((correctCount / finalQuestions.length) * 100);
       const isPass = score >= 72;
-      const timeTakenSeconds = (config.timeLimitMinutes * 60) - timeLeft;
+      const timeTakenSeconds = timeLeft < 0 ? Math.abs(timeLeft) : (config.timeLimitMinutes * 60) - timeLeft;
       setTimeTaken(timeTakenSeconds);
 
       historyService.saveRecord({
@@ -430,7 +442,8 @@ const App: React.FC = () => {
         timeTakenSeconds,
         examNames: Array.from(new Set(finalQuestions.map(q => q.sourceVersion || 'Unknown'))),
         isRetry,
-        wrongQuestionIds: wrongQuestions.map(q => q.id)
+        wrongQuestionIds: wrongQuestions.map(q => q.id),
+        mode: config.mode
       }, userHash);
 
       // We might want to update the displayed list of questions for the result page too
@@ -512,6 +525,7 @@ const App: React.FC = () => {
             onBack={handleBackToMenu}
             userTier={userTier}
             isBossRaid={isBossRaid}
+            isPractice={isPractice}
             wrongQuestionIds={bossRaidWrongIds}
             onLoadMoreData={fetchDatasets}
             onClearCache={handleClearCache}
@@ -549,6 +563,7 @@ const App: React.FC = () => {
               return map;
             })()}
             initialAwsMode={config.isAwsMode}
+            mode={config.mode}
           />
         )}
 

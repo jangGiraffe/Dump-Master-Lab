@@ -10,6 +10,7 @@ export interface ExamInfo {
     officialTimeLimitMinutes?: number;
     officialQuestionCount?: number;
     level?: ExamLevel;
+    languages: string[];
 }
 
 // Data for D-Day configuration
@@ -27,7 +28,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         category: 'AWS Certification',
         officialTimeLimitMinutes: 140,
         officialQuestionCount: 65,
-        level: 'ASSOCIATE'
+        level: 'ASSOCIATE',
+        languages: ['EN', 'JP', 'KR']
     },
     'AIP-C01': {
         code: 'AIP-C01',
@@ -36,7 +38,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         category: 'AWS Certification',
         officialTimeLimitMinutes: 215,
         officialQuestionCount: 85,
-        level: 'PROFESSIONAL'
+        level: 'PROFESSIONAL',
+        languages: ['EN', 'JP']
     },
     'CLF-C02': {
         code: 'CLF-C02',
@@ -45,7 +48,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         category: 'AWS Certification',
         officialTimeLimitMinutes: 90,
         officialQuestionCount: 65,
-        level: 'FOUNDATIONAL'
+        level: 'FOUNDATIONAL',
+        languages: ['EN', 'JP', 'KR']
     },
     'SAA-C03': {
         code: 'SAA-C03',
@@ -54,7 +58,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         category: 'AWS Certification',
         officialTimeLimitMinutes: 130,
         officialQuestionCount: 65,
-        level: 'ASSOCIATE'
+        level: 'ASSOCIATE',
+        languages: ['EN', 'JP', 'KR']
     },
     'DVA-C02': {
         code: 'DVA-C02',
@@ -63,16 +68,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         category: 'AWS Certification',
         officialTimeLimitMinutes: 130,
         officialQuestionCount: 65,
-        level: 'ASSOCIATE'
-    },
-    'DOP-C02': {
-        code: 'DOP-C02',
-        name: 'AWS Certified DevOps Engineer - Professional',
-        description: '분산 애플리케이션 시스템 운영 및 관리, 배포 자동화 능력을 검증하는 전문가급 시험입니다.',
-        category: 'AWS Certification',
-        officialTimeLimitMinutes: 180,
-        officialQuestionCount: 75,
-        level: 'PROFESSIONAL'
+        level: 'ASSOCIATE',
+        languages: ['EN', 'JP', 'KR']
     },
     'SOA-C02': {
         code: 'SOA-C02',
@@ -81,7 +78,18 @@ export const examsInfo: Record<string, ExamInfo> = {
         category: 'AWS Certification',
         officialTimeLimitMinutes: 130,
         officialQuestionCount: 65,
-        level: 'ASSOCIATE'
+        level: 'ASSOCIATE',
+        languages: ['EN', 'JP', 'KR']
+    },
+    'DOP-C02': {
+        code: 'DOP-C02',
+        name: 'AWS Certified DevOps Engineer - Professional',
+        description: '분산 애플리케이션 시스템 운영 및 관리, 배포 자동화 능력을 검증하는 전문가급 시험입니다.',
+        category: 'AWS Certification',
+        officialTimeLimitMinutes: 180,
+        officialQuestionCount: 75,
+        level: 'PROFESSIONAL',
+        languages: ['EN', 'JP', 'KR']
     },
     'SAMPLE': {
         code: 'SAMPLE',
@@ -90,7 +98,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         category: 'Practice',
         officialTimeLimitMinutes: 30,
         officialQuestionCount: 10,
-        level: 'FOUNDATIONAL'
+        level: 'FOUNDATIONAL',
+        languages: ['EN', 'KR']
     }
 };
 

@@ -9,11 +9,13 @@ import { APP_CONFIG } from '@/shared/config';
 import { UserTier } from '@/shared/model/types';
 
 interface MenuProps {
-  onSelectMode: (mode: 'quiz' | 'study' | 'history' | 'boss-raid') => void;
+  onSelectMode: (mode: 'quiz' | 'study' | 'history' | 'boss-raid' | 'practice') => void;
   onLogout: () => void;
   userTier: UserTier | null;
   userId: string;
 }
+
+import { GraduationCap } from 'lucide-react';
 
 export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier, userId }) => {
   return (
@@ -83,6 +85,22 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier, us
               <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-1">오답 문제풀이</h2>
               <p className="text-gray-500 dark:text-slate-400 text-xs">
                 지금까지 틀린 문제들만 모아 완벽하게 정복하세요. (오답 노트)
+              </p>
+            </div>
+          </div>
+
+          {/* Practice Mode Card (NEW) */}
+          <div
+            onClick={() => onSelectMode('practice')}
+            className="group bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-xl hover:border-amber-300 dark:hover:border-amber-500/50 transition-all cursor-pointer flex items-center gap-6"
+          >
+            <div className="w-16 h-16 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors text-amber-500 dark:text-amber-400">
+              <GraduationCap className="w-8 h-8" />
+            </div>
+            <div className="text-left">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-1">공부모드</h2>
+              <p className="text-gray-500 dark:text-slate-400 text-xs text-pretty">
+                한 문제씩 풀고 바로 정답을 확인하며 자유롭게 학습하세요.
               </p>
             </div>
           </div>

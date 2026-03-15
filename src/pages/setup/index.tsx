@@ -11,6 +11,7 @@ interface SetupProps {
   onBack: () => void;
   userTier: UserTier | null;
   isBossRaid?: boolean;
+  isPractice?: boolean;
   wrongQuestionIds?: string[];
   onLoadMoreData: (sourceIds: string[]) => Promise<Dataset[]>;
   onClearCache?: () => void;
@@ -23,6 +24,7 @@ export const Setup: React.FC<SetupProps> = ({
   onBack,
   userTier,
   isBossRaid = false,
+  isPractice = false,
   wrongQuestionIds = [],
   onLoadMoreData,
   onClearCache,
@@ -206,6 +208,13 @@ export const Setup: React.FC<SetupProps> = ({
 
     setMaxQuestions(total);
 
+    // If it's Study Mode, we don't need to cap or set defaults for time/count selection
+    if (isPractice) {
+      setQuestionCount(total);
+      setTimeLimit(0); // Represent unlimited
+      return;
+    }
+
     // Get official info for the current exam
     const examInfo = selectedExam ? examService.getExamByCode(selectedExam) : null;
     const defaultCount = examInfo?.officialQuestionCount || 65;
@@ -231,19 +240,51 @@ export const Setup: React.FC<SetupProps> = ({
     }
   }, [selectedVersions, currentDatasets, selectedExam, userTier]);
 
-  // Reset selection when exam changes — default to first item
+  // Reset selection when exam changes — default based on supported languages and priority
   useEffect(() => {
     if (selectedExam) {
-      const sorted = datasets
-        .filter(d => (d.examCode || 'Uncategorized') === selectedExam)
-        .sort((a, b) => {
-          const isAKR = a.name.includes('(KR)');
-          const isBKR = b.name.includes('(KR)');
-          if (isAKR && !isBKR) return -1;
-          if (!isAKR && isBKR) return 1;
-          return a.name.localeCompare(b.name);
-        });
-      setSelectedVersions(sorted.length > 0 ? [sorted[0].id] : []);
+      const examInfo = examService.getExamByCode(selectedExam);
+      const supportedLangs = examInfo?.languages || [];
+      
+      const filtered = datasets
+        .filter(d => (d.examCode || 'Uncategorized') === selectedExam);
+
+      // Support languages check (KR, EN, JP priority)
+      const priority = ['KR', 'EN', 'JP'];
+      
+      let bestDataset = null;
+      
+      // Try to find the best match based on priority AND if it's in supported languages
+      for (const lang of priority) {
+          const match = filtered.find(d => 
+              d.name.includes(`(${lang})`) && 
+              supportedLangs.includes(lang)
+          );
+          if (match) {
+              bestDataset = match;
+              break;
+          }
+      }
+
+      if (bestDataset) {
+          setSelectedVersions([bestDataset.id]);
+      } else {
+          // Fallback to previous logic: sorted first item
+          const sorted = filtered.sort((a, b) => {
+              const isAKR = a.name.includes('(KR)');
+              const isBKR = b.name.includes('(KR)');
+              const isAEN = a.name.includes('(EN)');
+              const isBEN = b.name.includes('(EN)');
+              
+              if (isAKR && !isBKR) return -1;
+              if (!isAKR && isBKR) return 1;
+              if (isAEN && !isBEN) return -1;
+              if (!isAEN && isBEN) return 1;
+              
+              return a.name.localeCompare(b.name);
+          });
+          setSelectedVersions(sorted.length > 0 ? [sorted[0].id] : []);
+      }
     } else {
       setSelectedVersions([]);
     }
@@ -301,8 +342,8 @@ export const Setup: React.FC<SetupProps> = ({
     if (selectedVersions.length === 0) return;
     onStart({
       selectedVersions,
-      questionCount: Math.min(questionCount, maxQuestions),
-      timeLimitMinutes: timeLimit,
+      questionCount: isPractice ? maxQuestions : Math.min(questionCount, maxQuestions),
+      timeLimitMinutes: isPractice ? 0 : timeLimit,
       isAwsMode
     });
   };
@@ -332,7 +373,7 @@ export const Setup: React.FC<SetupProps> = ({
             </button>
             <Settings className="w-5 h-5 text-primary mr-2" />
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-              {isBossRaid ? '오답 문제풀이 설정' : '시험 설정'}
+              {isBossRaid ? '오답 문제풀이 설정' : (isPractice ? '공부모드 학습 설정' : '시험 설정')}
             </h2>
             {isLoading && (
               <div className="ml-4 flex items-center gap-2 text-indigo-600 animate-pulse">
@@ -506,7 +547,7 @@ export const Setup: React.FC<SetupProps> = ({
                   .map(ds => {
                     // Parse language badge
                     let displayName = ds.name;
-                    let lang: 'KR' | 'EN' | null = null;
+                    let lang: 'KR' | 'EN' | 'JP' | null = null;
 
                     if (displayName.includes('(KR)')) {
                       lang = 'KR';
@@ -514,6 +555,9 @@ export const Setup: React.FC<SetupProps> = ({
                     } else if (displayName.includes('(EN)')) {
                       lang = 'EN';
                       displayName = displayName.replace('(EN)', '').trim();
+                    } else if (displayName.includes('(JP)')) {
+                      lang = 'JP';
+                      displayName = displayName.replace('(JP)', '').trim();
                     }
 
                     return (
@@ -536,6 +580,11 @@ export const Setup: React.FC<SetupProps> = ({
                               <img src="https://flagcdn.com/w20/us.png" width="14" alt="EN" className="rounded-sm" /> EN
                             </span>
                           )}
+                          {lang === 'JP' && (
+                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/20 flex items-center gap-1.5">
+                              <img src="https://flagcdn.com/w20/jp.png" width="14" alt="JP" className="rounded-sm" /> JP
+                            </span>
+                          )}
                           <span className="font-medium text-gray-700 dark:text-slate-300 mr-2">{displayName}</span>
                           {getLevelBadge(ds.examLevel)}
                         </div>
@@ -551,117 +600,129 @@ export const Setup: React.FC<SetupProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Question Count */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                  문제 수
-                  {maxQuestions > 0 && <span className="font-normal text-gray-500 dark:text-slate-500 ml-1">(최대: {effectiveMax})</span>}
-                </label>
+            {!isPractice && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Question Count */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                    문제 수
+                    {maxQuestions > 0 && <span className="font-normal text-gray-500 dark:text-slate-500 ml-1">(최대: {effectiveMax})</span>}
+                  </label>
 
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {[5, 10, 20].map(cnt => (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {[5, 10, 20].map(cnt => (
+                      <button
+                        key={cnt}
+                        type="button"
+                        onClick={() => {
+                          const examInfo = selectedExam ? examService.getExamByCode(selectedExam) : null;
+                          const timePerQuestion = (examInfo?.officialTimeLimitMinutes && examInfo?.officialQuestionCount)
+                            ? examInfo.officialTimeLimitMinutes / examInfo.officialQuestionCount
+                            : 2;
+                          const val = Math.min(cnt, effectiveMax);
+                          setQuestionCount(val);
+                          setTimeLimit(Math.round(val * timePerQuestion));
+                          setIsManualCount(false);
+                        }}
+                        className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${!isManualCount && questionCount === cnt
+                          ? 'bg-primary border-primary text-white shadow-sm'
+                          : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-300 dark:hover:border-slate-500'
+                          } ${cnt > effectiveMax ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        disabled={cnt > effectiveMax && userTier === 'V'}
+                      >
+                        {cnt}개
+                      </button>
+                    ))}
+                    {/* Official Count Button */}
+                    {(() => {
+                      const examInfo = selectedExam ? examService.getExamByCode(selectedExam) : null;
+                      const offCnt = examInfo?.officialQuestionCount;
+                      if (offCnt && ![5, 10, 20].includes(offCnt)) {
+                        return (
+                          <button
+                            key="official"
+                            type="button"
+                            onClick={() => {
+                              const val = Math.min(offCnt, effectiveMax);
+                              setQuestionCount(val);
+                              const timePerQuestion = (examInfo?.officialTimeLimitMinutes && examInfo?.officialQuestionCount)
+                                ? examInfo.officialTimeLimitMinutes / examInfo.officialQuestionCount
+                                : 2;
+                              setTimeLimit(Math.round(val * timePerQuestion));
+                              setIsManualCount(false);
+                            }}
+                            className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${!isManualCount && questionCount === offCnt
+                              ? 'bg-primary border-primary text-white shadow-sm'
+                              : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-300 dark:hover:border-slate-500'
+                              } ${offCnt > effectiveMax ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            disabled={offCnt > effectiveMax && userTier === 'V'}
+                          >
+                            공식({offCnt}개)
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
                     <button
-                      key={cnt}
                       type="button"
-                      onClick={() => {
-                        const examInfo = selectedExam ? examService.getExamByCode(selectedExam) : null;
-                        const timePerQuestion = (examInfo?.officialTimeLimitMinutes && examInfo?.officialQuestionCount)
-                          ? examInfo.officialTimeLimitMinutes / examInfo.officialQuestionCount
-                          : 2;
-                        const val = Math.min(cnt, effectiveMax);
-                        setQuestionCount(val);
-                        setTimeLimit(Math.round(val * timePerQuestion));
-                        setIsManualCount(false);
-                      }}
-                      className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${!isManualCount && questionCount === cnt
+                      onClick={() => setIsManualCount(true)}
+                      className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${isManualCount
                         ? 'bg-primary border-primary text-white shadow-sm'
                         : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-300 dark:hover:border-slate-500'
-                        } ${cnt > effectiveMax ? 'opacity-40 cursor-not-allowed' : ''}`}
-                      disabled={cnt > effectiveMax && userTier === 'V'}
+                        }`}
                     >
-                      {cnt}개
+                      직접 입력
                     </button>
-                  ))}
-                  {/* Official Count Button */}
-                  {(() => {
-                    const examInfo = selectedExam ? examService.getExamByCode(selectedExam) : null;
-                    const offCnt = examInfo?.officialQuestionCount;
-                    if (offCnt && ![5, 10, 20].includes(offCnt)) {
-                      return (
-                        <button
-                          key="official"
-                          type="button"
-                          onClick={() => {
-                            const val = Math.min(offCnt, effectiveMax);
-                            setQuestionCount(val);
-                            const timePerQuestion = (examInfo?.officialTimeLimitMinutes && examInfo?.officialQuestionCount)
-                              ? examInfo.officialTimeLimitMinutes / examInfo.officialQuestionCount
-                              : 2;
-                            setTimeLimit(Math.round(val * timePerQuestion));
-                            setIsManualCount(false);
-                          }}
-                          className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${!isManualCount && questionCount === offCnt
-                            ? 'bg-primary border-primary text-white shadow-sm'
-                            : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-300 dark:hover:border-slate-500'
-                            } ${offCnt > effectiveMax ? 'opacity-40 cursor-not-allowed' : ''}`}
-                          disabled={offCnt > effectiveMax && userTier === 'V'}
-                        >
-                          공식({offCnt}개)
-                        </button>
-                      );
-                    }
-                    return null;
-                  })()}
-                  <button
-                    type="button"
-                    onClick={() => setIsManualCount(true)}
-                    className={`px-4 py-1.5 rounded-md text-xs font-semibold border transition-all ${isManualCount
-                      ? 'bg-primary border-primary text-white shadow-sm'
-                      : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-300 dark:hover:border-slate-500'
-                      }`}
-                  >
-                    직접 입력
-                  </button>
+                  </div>
+
+                  {isManualCount && (
+                    <div className="relative group animate-fadeIn">
+                      <input
+                        type="number"
+                        min="1"
+                        max={effectiveMax > 0 ? effectiveMax : undefined}
+                        value={questionCount}
+                        onChange={handleQuestionCountChange}
+                        disabled={selectedVersions.length === 0}
+                        autoFocus
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 dark:placeholder-slate-500 text-sm"
+                        placeholder="문제 수를 입력하세요"
+                      />
+                      {userTier !== 'V' && questionCount >= 5 && (
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                          ⚠️ 일반 회원은 한번에 최대 5문제까지만 풀 수 있습니다.
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-black/80"></div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-2">선택한 시험의 공식 시간 비율에 따라 제한 시간이 자동으로 계산됩니다.</p>
                 </div>
 
-                {isManualCount && (
-                  <div className="relative group animate-fadeIn">
-                    <input
-                      type="number"
-                      min="1"
-                      max={effectiveMax > 0 ? effectiveMax : undefined}
-                      value={questionCount}
-                      onChange={handleQuestionCountChange}
-                      disabled={selectedVersions.length === 0}
-                      autoFocus
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 dark:placeholder-slate-500 text-sm"
-                      placeholder="문제 수를 입력하세요"
-                    />
-                    {userTier !== 'V' && questionCount >= 5 && (
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                        ⚠️ 일반 회원은 한번에 최대 5문제까지만 풀 수 있습니다.
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-black/80"></div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <p className="text-xs text-gray-400 mt-2">선택한 시험의 공식 시간 비율에 따라 제한 시간이 자동으로 계산됩니다.</p>
+                {/* Time Limit */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">제한 시간 (분)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="300"
+                    value={timeLimit}
+                    onChange={(e) => setTimeLimit(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 dark:placeholder-slate-500 text-sm"
+                  />
+                </div>
               </div>
+            )}
 
-              {/* Time Limit */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">제한 시간 (분)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="300"
-                  value={timeLimit}
-                  onChange={(e) => setTimeLimit(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md focus:ring-primary focus:border-primary placeholder-gray-400 dark:placeholder-slate-500 text-sm"
-                />
+            {isPractice && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3">
+                <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800 dark:text-amber-300">
+                  <p className="font-bold mb-1">무한 공부 모드 안내</p>
+                  <p className="leading-relaxed opacity-90">선택한 문제 은행의 모든 문제를 시간 제한 없이 학습합니다. 마지막 문제 이후에는 자동으로 처음부터 다시 시작되어 무제한으로 학습하실 수 있습니다.</p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* AWS Exam Mode Toggle */}
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600 mt-6">
@@ -690,7 +751,7 @@ export const Setup: React.FC<SetupProps> = ({
                   }`}
               >
                 <Play className="w-4 h-4 mr-2" />
-                {isBossRaid ? '문제풀이 시작' : '시험 시작'}
+                {isBossRaid ? '문제풀이 시작' : (isPractice ? '학습 시작' : '시험 시작')}
               </button>
             </div>
           </div>

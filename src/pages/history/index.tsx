@@ -768,6 +768,11 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
                                                                             재시험
                                                                         </span>
                                                                     )}
+                                                                    {record.mode === 'practice' && (
+                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                                                            공부모드
+                                                                        </span>
+                                                                    )}
                                                                     <span className="text-xs text-gray-400 dark:text-slate-500 flex items-center ml-1">
                                                                         <Clock className="w-3 h-3 mr-1" />
                                                                         {formatDate(record.timestamp).split(' ').slice(2).join(' ')}
@@ -867,6 +872,11 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
                                                                     {record.isRetry && (
                                                                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
                                                                             재시험
+                                                                        </span>
+                                                                    )}
+                                                                    {record.mode === 'practice' && (
+                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                                                            공부모드
                                                                         </span>
                                                                     )}
                                                                     <span className="text-xs text-gray-400 dark:text-slate-500 flex items-center ml-1">
