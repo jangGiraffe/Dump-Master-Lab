@@ -1,5 +1,6 @@
 import { db } from './firebase';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { ExamLevel } from '../model/types';
 
 export interface ExamInfo {
     code: string;
@@ -8,6 +9,7 @@ export interface ExamInfo {
     category: string;
     officialTimeLimitMinutes?: number;
     officialQuestionCount?: number;
+    level?: ExamLevel;
 }
 
 // Data for D-Day configuration
@@ -20,11 +22,12 @@ export interface UserExamConfig {
 export const examsInfo: Record<string, ExamInfo> = {
     'MLA-C01': {
         code: 'MLA-C01',
-        name: 'AWS Certified Machine Learning - Specialty',
+        name: 'AWS Certified Machine Learning - Associate',
         description: '기계 학습 아키텍처 설계, 구현 및 고도화 능력을 검증하는 시험입니다.',
         category: 'AWS Certification',
         officialTimeLimitMinutes: 140,
-        officialQuestionCount: 65
+        officialQuestionCount: 65,
+        level: 'ASSOCIATE'
     },
     'AIP-C01': {
         code: 'AIP-C01',
@@ -32,7 +35,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         description: 'AWS 환경에서 생성형 AI 기반 솔루션을 설계, 통합 및 유지 관리하는 전문가급 능력을 검증합니다.',
         category: 'AWS Certification',
         officialTimeLimitMinutes: 215,
-        officialQuestionCount: 85
+        officialQuestionCount: 85,
+        level: 'PROFESSIONAL'
     },
     'CLF-C02': {
         code: 'CLF-C02',
@@ -40,7 +44,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         description: '클라우드 개념, 보안, 기술 및 전반적인 이해를 검증하는 기초 시험입니다.',
         category: 'AWS Certification',
         officialTimeLimitMinutes: 90,
-        officialQuestionCount: 65
+        officialQuestionCount: 65,
+        level: 'FOUNDATIONAL'
     },
     'SAA-C03': {
         code: 'SAA-C03',
@@ -48,7 +53,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         description: 'AWS 기술을 활용한 가용성, 비용 효율성 및 확장 가능한 시스템 설계 능력을 검증합니다.',
         category: 'AWS Certification',
         officialTimeLimitMinutes: 130,
-        officialQuestionCount: 65
+        officialQuestionCount: 65,
+        level: 'ASSOCIATE'
     },
     'DVA-C02': {
         code: 'DVA-C02',
@@ -56,7 +62,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         description: 'AWS 기반 애플리케이션 개발, 최적화 및 배포 능력을 검증하는 시험입니다.',
         category: 'AWS Certification',
         officialTimeLimitMinutes: 130,
-        officialQuestionCount: 65
+        officialQuestionCount: 65,
+        level: 'ASSOCIATE'
     },
     'DOP-C02': {
         code: 'DOP-C02',
@@ -64,7 +71,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         description: '분산 애플리케이션 시스템 운영 및 관리, 배포 자동화 능력을 검증하는 전문가급 시험입니다.',
         category: 'AWS Certification',
         officialTimeLimitMinutes: 180,
-        officialQuestionCount: 75
+        officialQuestionCount: 75,
+        level: 'PROFESSIONAL'
     },
     'SOA-C02': {
         code: 'SOA-C02',
@@ -72,7 +80,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         description: 'AWS 컴퓨팅, 네트워크, 데이터베이스 및 스토리지 리소스의 배포 및 관리 능력을 검증합니다.',
         category: 'AWS Certification',
         officialTimeLimitMinutes: 130,
-        officialQuestionCount: 65
+        officialQuestionCount: 65,
+        level: 'ASSOCIATE'
     },
     'SAMPLE': {
         code: 'SAMPLE',
@@ -80,7 +89,8 @@ export const examsInfo: Record<string, ExamInfo> = {
         description: '체험하기 및 일반 회원을 위한 무료 샘플 문제 모음입니다.',
         category: 'Practice',
         officialTimeLimitMinutes: 30,
-        officialQuestionCount: 10
+        officialQuestionCount: 10,
+        level: 'FOUNDATIONAL'
     }
 };
 
@@ -132,7 +142,6 @@ class ExamService {
                     updatedAt: timestamp
                 });
             } catch (e) {
-                console.error("Error saving exam config to Firestore:", e);
             }
         }
     }
@@ -153,7 +162,7 @@ class ExamService {
             // If cache is expired or missing, fetch from Cloud
             if (isCacheExpired) {
                 try {
-                    console.log(`[ExamService] Cache expired or missing for ${userId}, fetching from Cloud...`);
+                    
                     const docSnap = await getDoc(doc(db, 'examConfigs', userId));
                     if (docSnap.exists()) {
                         const cloudConfig = docSnap.data() as UserExamConfig;
@@ -170,12 +179,11 @@ class ExamService {
                         return null;
                     }
                 } catch (e) {
-                    console.error("Error fetching exam config from Firestore:", e);
                     // On error, fallback to local even if expired
                     return localConfig;
                 }
             } else {
-                console.log(`[ExamService] Using valid local cache for ${userId} (Age: ${Math.round((now - parseInt(cacheTs)) / 60000)}m)`);
+                
             }
         }
 
@@ -191,7 +199,6 @@ class ExamService {
             try {
                 await deleteDoc(doc(db, 'examConfigs', userId));
             } catch (e) {
-                console.error("Error deleting exam config from Firestore:", e);
             }
         }
     }

@@ -52,7 +52,6 @@ const App: React.FC = () => {
         const isExpired = !timestamp || (Date.now() - timestamp > ONE_YEAR);
 
         if (isExpired) {
-          console.log("Session expired, logging out...");
           localStorage.removeItem(SESSION_KEY);
           return;
         }
@@ -62,7 +61,6 @@ const App: React.FC = () => {
           if (!password) throw new Error("Missing password for protected tier");
           const verifiedTier = await authenticateUser(password);
           if (verifiedTier !== tier) {
-            console.error("Session tier mismatch or invalid password. Potential manipulation detected.");
             localStorage.removeItem(SESSION_KEY);
             setStage(AppStage.LOGIN);
             return;
@@ -74,7 +72,6 @@ const App: React.FC = () => {
         // 3. If everything is fine, log in
         handleLogin(tier, userId || (password ? 'user_' + password.substring(0, 6) : 'guest'), password);
       } catch (e) {
-        console.error("Failed to restore session or validation failed", e);
         localStorage.removeItem(SESSION_KEY);
         setStage(AppStage.LOGIN);
       }
@@ -102,12 +99,12 @@ const App: React.FC = () => {
           const serverVersion = source.version || 1;
           const cachedVersion = cached.version || 1;
 
-          if (serverVersion > cachedVersion) {
-            console.log(`[Cache] Update available for ${source.id}: Server(${serverVersion}) > Cache(${cachedVersion})`);
+          const isDataValid = Array.isArray(cached.data);
+
+          if (serverVersion > cachedVersion || !isDataValid) {
             return null; // Trigger network fetch
           }
 
-          console.log(`[Cache] Loaded persistently: ${source.id} (v${cachedVersion})`);
           return cached;
         }
         return null;
@@ -120,26 +117,41 @@ const App: React.FC = () => {
     const networkLoaded = await Promise.all(
       trulyMissingSources.map(async (source) => {
         try {
-          console.log(`[Network] Fetching: ${source.url}`);
           const response = await fetch(source.url);
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           
           const contentType = response.headers.get("content-type");
           if (!contentType || !contentType.includes("application/json")) {
             const text = await response.text();
-            console.error(`Expected JSON but got ${contentType}. Body snippet: ${text.substring(0, 100)}`);
             throw new Error(`Invalid content type: ${contentType}. The file might be missing or the path is incorrect.`);
           }
 
           const rawData = await response.json();
-
           let data = rawData;
-          if (source.isEncrypted && decryptionKey) {
+
+          // Advanced Decryption Logic: Auto-detect if data is wrapped in encryptedData
+          const isActuallyEncrypted = rawData && (rawData.encryptedData || rawData.payload);
+          
+          if (isActuallyEncrypted || (source.isEncrypted && decryptionKey)) {
+            if (!decryptionKey) {
+              throw new Error("데이터 복호화 키가 없습니다. .env 파일을 확인해주세요.");
+            }
+            
             const ciphertext = rawData.encryptedData || rawData.payload || rawData;
             const bytes = CryptoJS.AES.decrypt(ciphertext, decryptionKey);
             const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
-            if (!decryptedString) throw new Error("Decryption failed - empty result");
+            
+            if (!decryptedString) throw new Error("복호화 실패: 올바른 키가 아니거나 데이터가 손상되었습니다.");
             data = JSON.parse(decryptedString);
+            
+            // Validate that we now have an array
+            if (!Array.isArray(data)) {
+              if (data && Array.isArray(data.data)) {
+                data = data.data;
+              } else {
+                throw new Error("데이터 형식이 올바르지 않습니다 (배열이 아님).");
+              }
+            }
           }
 
           const dataset: Dataset = {
@@ -155,7 +167,6 @@ const App: React.FC = () => {
           await cacheService.set(source.id, dataset);
           return dataset;
         } catch (e) {
-          console.error(`Failed to load ${source.url}`, e);
           return null;
         }
       })
@@ -166,10 +177,6 @@ const App: React.FC = () => {
       ...cachedResults.filter((d): d is Dataset => d !== null),
       ...networkLoaded.filter((d): d is Dataset => d !== null)
     ];
-
-    if (newValidDatasets.length > 0) {
-      console.log(`[Cache] Successfully resolved ${newValidDatasets.length} datasets.`);
-    }
 
     const updatedDatasets = [...datasets, ...newValidDatasets];
     setDatasets(updatedDatasets);
@@ -207,7 +214,6 @@ const App: React.FC = () => {
 
     // Initial sync
     historyService.syncLocalToCloud(finalUserId).catch(err => {
-      console.error("Failed to perform initial history sync:", err);
     });
   };
 
@@ -317,23 +323,50 @@ const App: React.FC = () => {
     setStage(AppStage.LOADING);
     setConfig(newConfig);
 
-    // 1. Load selected datasets on demand
-    const currentDatasets = await fetchDatasets(newConfig.selectedVersions);
+    // 1. Identify all versions to fetch (including counterparts for translation)
+    const versionsToFetch = new Set(newConfig.selectedVersions);
+    
+    newConfig.selectedVersions.forEach(id => {
+      const source = dataSources.find(s => s.id === id);
+      if (source && source.url) {
+        if (source.url.endsWith('_KR.json')) {
+          // If KR selected, also try to fetch EN
+          const enUrl = source.url.replace('_KR.json', '.json');
+          const enSource = dataSources.find(s => s.url === enUrl);
+          if (enSource) versionsToFetch.add(enSource.id);
+        } else if (source.url.endsWith('.json') && !source.url.includes('_KR')) {
+          // If EN selected, also try to fetch KR
+          const krUrl = source.url.replace('.json', '_KR.json');
+          const krSource = dataSources.find(s => s.url === krUrl);
+          if (krSource) versionsToFetch.add(krSource.id);
+        }
+      }
+    });
 
-    // 2. Filter datasets based on selection
+    const currentDatasets = await fetchDatasets(Array.from(versionsToFetch));
+
+    // 2. Filter datasets based on selection (what user actually wanted to play)
     const selectedData = currentDatasets.filter(ds => newConfig.selectedVersions.includes(ds.id));
 
-    // 2. Process raw data into Question objects with IDs
+    // 3. Process raw data into Question objects with IDs
     let allQuestionsPool: Question[] = [];
     selectedData.forEach(ds => {
       let originalData: any[] | undefined = undefined;
 
-      // Check if it's a Korean dataset and look for its English counterpart
-      if (ds.url && ds.url.endsWith('_KR.json')) {
-        const originalUrl = ds.url.replace('_KR.json', '.json');
-        const originalDataset = datasets.find(d => d.url === originalUrl);
-        if (originalDataset) {
-          originalData = originalDataset.data;
+      // Bidirectional mapping: Check if it's KR and look for EN, OR if it's EN and look for KR
+      if (ds.url) {
+        let counterpartUrl = '';
+        if (ds.url.endsWith('_KR.json')) {
+          counterpartUrl = ds.url.replace('_KR.json', '.json');
+        } else if (ds.url.endsWith('.json') && !ds.url.includes('_KR')) {
+          counterpartUrl = ds.url.replace('.json', '_KR.json');
+        }
+        
+        if (counterpartUrl) {
+          const counterpartDataset = currentDatasets.find(d => d.url === counterpartUrl);
+          if (counterpartDataset) {
+            originalData = counterpartDataset.data;
+          }
         }
       }
 
@@ -482,6 +515,7 @@ const App: React.FC = () => {
             wrongQuestionIds={bossRaidWrongIds}
             onLoadMoreData={fetchDatasets}
             onClearCache={handleClearCache}
+            userId={userHash}
           />
         )}
 

@@ -25,7 +25,6 @@ export const historyService = {
                 const docRef = await addDoc(collection(db, 'history'), newRecordData);
                 id = docRef.id;
             } catch (e) {
-                console.error("Error adding document to Firestore: ", e);
                 id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11);
             }
         } else {
@@ -81,10 +80,8 @@ export const historyService = {
 
             return records;
         } catch (e: any) {
-            console.error("Error fetching documents from Firestore: ", e);
             // If it's a missing index error, Firestore provides a link in the error message
             if (e.message && e.message.includes('index')) {
-                console.error("FIREBASE INDEX ERROR: ", e.message);
                 // We won't alert here to avoid annoying popups, but the console will have the link.
             }
             return historyService.getLocalRecords(userId);
@@ -113,7 +110,6 @@ export const historyService = {
 
     deleteRecords: async (ids: string[]) => {
         if (ids.length === 0) return;
-        console.log(`[HistoryService] Attempting to delete ${ids.length} records. (Mode: ${STORAGE_MODE})`);
 
         // 1. Delete from Firestore if in CLOUD mode
         if (STORAGE_MODE === 'CLOUD') {
@@ -123,9 +119,7 @@ export const historyService = {
                     const docRef = doc(db, 'history', id);
                     await deleteDoc(docRef);
                 }));
-                console.log(`[HistoryService] Successfully deleted ${ids.length} records from Firestore.`);
             } catch (e) {
-                console.error("[HistoryService] Error deleting from Firestore:", e);
                 throw e;
             }
         }
@@ -137,7 +131,6 @@ export const historyService = {
             const idSet = new Set(ids);
             const filtered = allRecords.filter(r => !idSet.has(r.id));
             localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-            console.log(`[HistoryService] Deleted ${ids.length} records from local cache.`);
         }
     },
 
@@ -169,7 +162,6 @@ export const historyService = {
                     syncedIds.push(local.id);
                     syncCount++;
                 } catch (e) {
-                    console.error("[HistoryService] Failed to sync record:", local.id, e);
                 }
             } else {
                 // Already in cloud, mark for local removal to cleanup IDs

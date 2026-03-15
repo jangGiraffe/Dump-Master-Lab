@@ -55,17 +55,19 @@ export interface HistoryRecord {
 
 
 export type UserTier = 'N' | 'V' | 'G'; // N: Normal, V: VIP, G: Guest
+export type ExamLevel = 'FOUNDATIONAL' | 'ASSOCIATE' | 'PROFESSIONAL' | 'SPECIALTY';
 
 export interface DataSource {
   id: string;
   name: string;
   examCode?: string; // e.g., 'MLA-C01'
-  examName?: string; // e.g., 'AWS Certified Machine Learning - Specialty'
+  examName?: string; // e.g., 'AWS Certified Machine Learning - Associate'
   requiredTier?: UserTier[]; // Tiers allowed to access
   url?: string;
   data?: any[]; // Pre-loaded data
   isEncrypted?: boolean;
   version?: number;
+  examLevel?: ExamLevel;
 }
 
 export interface Dataset extends DataSource {

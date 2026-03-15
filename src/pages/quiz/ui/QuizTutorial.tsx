@@ -109,7 +109,7 @@ export const QuizTutorial: React.FC<QuizTutorialProps> = ({ onStart }) => {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600 flex items-center">
                   <Languages className="w-3 h-3 mr-1" />
-                  원문 보기
+                  원문/번역 보기
                 </span>
                 <div className="flex items-center">
                   <Kbd>O</Kbd>

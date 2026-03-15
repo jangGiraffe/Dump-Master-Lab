@@ -124,7 +124,6 @@ export const authenticateUser = async (input: string): Promise<'N' | 'V' | null>
     if (inputHash === APP_CONFIG.VIP_PASSWORD_HASH) return 'V';
     return null;
   } catch (e) {
-    console.error("Crypto error", e);
     return null;
   }
 };
@@ -145,7 +144,10 @@ export const formatTime = (seconds: number): string => {
 };
 
 // Helper to assign IDs and source to raw data
-export const processRawQuestions = (rawData: any[], versionName: string, originalData?: any[]): Question[] => {
+export const processRawQuestions = (rawData: any, versionName: string, originalData?: any[]): Question[] => {
+  if (!Array.isArray(rawData)) {
+    return [];
+  }
   return rawData.map((q, idx) => {
     let rawAnswer = q.answer || '';
     if (Array.isArray(rawAnswer)) {

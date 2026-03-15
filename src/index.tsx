@@ -12,10 +12,8 @@ if ('serviceWorker' in navigator) {
         }
       })
       .catch((err) => {
-        console.warn("Failed to get service worker registrations:", err);
       });
   } catch (e) {
-    console.warn("Error checking service workers:", e);
   }
 }
 

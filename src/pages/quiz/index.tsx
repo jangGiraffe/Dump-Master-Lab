@@ -174,7 +174,6 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
     }
   }, [questions, currentIdx, getOptionLabel]);
 
@@ -458,6 +457,22 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [showTutorial, currentIdx, questions.length, handleNext, handlePrev]);
+
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center space-y-4">
+        <AlertTriangle className="w-12 h-12 text-amber-500" />
+        <h2 className="text-xl font-bold dark:text-white">문제를 불러오지 못했습니다.</h2>
+        <p className="text-gray-600 dark:text-slate-400 text-sm">데이터가 암호화되어 있거나 복호화에 실패했습니다.</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          페이지 새로고침
+        </button>
+      </div>
+    );
+  }
 
   const currentQ = questions[currentIdx];
   const selectedAnswer = answers[currentQ.id];
@@ -800,7 +815,11 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                     className={`flex items-center font-medium transition-colors text-sm md:text-base group ${showOriginal ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400'}`}
                   >
                     <Languages className="w-5 h-5 mr-2" />
-                    <span>{showOriginal ? "한국어 보기" : "원문 보기"}</span>
+                    <span>
+                      {currentQ.sourceVersion.startsWith('kr-') 
+                        ? (showOriginal ? "한국어 보기" : "원문 보기") 
+                        : (showOriginal ? "원문 보기" : "번역 보기")}
+                    </span>
                     <span className="ml-2 text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-600 font-mono inline-block group-hover:bg-gray-200 dark:group-hover:bg-slate-600">
                       O, 0
                     </span>
@@ -836,7 +855,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
                       return found.length > 0 ? found.join(', ') : currentQ.answer;
                     })()}
                   </p>
-                  <div className="whitespace-pre-wrap">{currentQ.explanation}</div>
+                  <div className="whitespace-pre-wrap">{(showOriginal && currentQ.originalExplanation) ? currentQ.originalExplanation : currentQ.explanation}</div>
                 </div>
               )}
             </div>

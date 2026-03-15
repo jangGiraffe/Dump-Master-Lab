@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
-import { Dataset, Question, UserTier, QuizConfig } from '@/shared/model/types';
-import { Settings, Play, ChevronLeft, ChevronRight, BookOpen, Info, Bot, Loader2 } from 'lucide-react';
+import { Dataset, Question, UserTier, QuizConfig, ExamLevel } from '@/shared/model/types';
+import { Settings, Play, ChevronLeft, ChevronRight, BookOpen, Info, Bot, Loader2, Target } from 'lucide-react';
 import { examService } from '@/shared/api/examService';
 import { dataSources } from '@/shared/api/dataService';
 
@@ -14,6 +14,7 @@ interface SetupProps {
   wrongQuestionIds?: string[];
   onLoadMoreData: (sourceIds: string[]) => Promise<Dataset[]>;
   onClearCache?: () => void;
+  userId?: string;
 }
 
 export const Setup: React.FC<SetupProps> = ({
@@ -24,8 +25,25 @@ export const Setup: React.FC<SetupProps> = ({
   isBossRaid = false,
   wrongQuestionIds = [],
   onLoadMoreData,
-  onClearCache
+  onClearCache,
+  userId = ''
 }) => {
+  const getLevelBadge = (level?: ExamLevel) => {
+    if (!level) return null;
+    const config = {
+      FOUNDATIONAL: { label: 'Foundational', className: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400 border-gray-200 dark:border-slate-600' },
+      ASSOCIATE: { label: 'Associate', className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
+      PROFESSIONAL: { label: 'Professional', className: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800' },
+      SPECIALTY: { label: 'Specialty', className: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800' },
+    };
+    const { label, className } = config[level];
+    return (
+      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${className}`}>
+        {label}
+      </span>
+    );
+  };
+
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
   // Default to 65 questions
@@ -37,6 +55,33 @@ export const Setup: React.FC<SetupProps> = ({
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isAwsMode, setIsAwsMode] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [dDayConfig, setDDayConfig] = useState<{ code: string; date: string } | null>(null);
+
+  // Fetch D-Day configured exam
+  useEffect(() => {
+    const fetchDDay = async () => {
+      if (!userId) return;
+      const config = await examService.getUserExamConfig(userId);
+      if (config && config.code && config.date) {
+        setDDayConfig({ code: config.code, date: config.date });
+      }
+    };
+    fetchDDay();
+  }, [userId]);
+
+  const getDDayCount = (targetDate: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(targetDate);
+    target.setHours(0, 0, 0, 0);
+    
+    const diffTime = target.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'D-Day';
+    if (diffDays < 0) return `D+${Math.abs(diffDays)}`;
+    return `D-${diffDays}`;
+  };
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -55,6 +100,7 @@ export const Setup: React.FC<SetupProps> = ({
       description: examInfo.description,
       officialTime: examInfo.officialTimeLimitMinutes,
       officialCount: examInfo.officialQuestionCount,
+      level: examInfo.level,
       hasData: datasetCodes.has(examInfo.code)
     }));
 
@@ -68,6 +114,7 @@ export const Setup: React.FC<SetupProps> = ({
           description: '해당 시험에 대한 정보가 없습니다.',
           officialTime: undefined,
           officialCount: undefined,
+          level: undefined,
           hasData: true
         });
       }
@@ -88,11 +135,17 @@ export const Setup: React.FC<SetupProps> = ({
     }
 
     return list.sort((a, b) => {
+      // 1. D-Day exam always at the top
+      if (dDayConfig?.code) {
+        if (a.code === dDayConfig.code && b.code !== dDayConfig.code) return -1;
+        if (a.code !== dDayConfig.code && b.code === dDayConfig.code) return 1;
+      }
+      // 2. Then by data availability
       if (a.hasData && !b.hasData) return -1;
       if (!a.hasData && b.hasData) return 1;
       return 0;
     });
-  }, [isBossRaid, wrongQuestionIds]);
+  }, [isBossRaid, wrongQuestionIds, dDayConfig]);
 
   const handleExamClick = async (exam: typeof exams[0]) => {
     if (!exam.hasData) {
@@ -110,7 +163,6 @@ export const Setup: React.FC<SetupProps> = ({
       await onLoadMoreData(sourcesForExam);
       setSelectedExam(exam.code);
     } catch (err) {
-      console.error("Failed to load exam data:", err);
       showToast("데이터를 불러오지 못했습니다. 네트워크를 확인해주세요.");
     } finally {
       setIsLoading(false);
@@ -351,6 +403,15 @@ export const Setup: React.FC<SetupProps> = ({
                     <div>
                       <div className="flex items-center gap-2">
                         <div className="font-bold text-gray-800 dark:text-white">{exam.code}</div>
+                        {getLevelBadge(exam.level)}
+                        {exam.code === dDayConfig?.code && (
+                          <span className="flex items-center gap-1.5 text-[10px] bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded font-bold border border-red-200 dark:border-red-800">
+                             <Target className="w-2.5 h-2.5" />
+                             <span>{getDDayCount(dDayConfig.date)}</span>
+                             <span className="opacity-60">|</span>
+                             <span>목표</span>
+                          </span>
+                        )}
                         {!exam.hasData && (
                           <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold border border-amber-200 dark:border-amber-800">
                             준비 중
@@ -475,7 +536,8 @@ export const Setup: React.FC<SetupProps> = ({
                               <img src="https://flagcdn.com/w20/us.png" width="14" alt="EN" className="rounded-sm" /> EN
                             </span>
                           )}
-                          <span className="font-medium text-gray-700 dark:text-slate-300">{displayName}</span>
+                          <span className="font-medium text-gray-700 dark:text-slate-300 mr-2">{displayName}</span>
+                          {getLevelBadge(ds.examLevel)}
                         </div>
                         <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedVersions.includes(ds.id) ? 'border-primary bg-primary' : 'border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700'
                           }`}>

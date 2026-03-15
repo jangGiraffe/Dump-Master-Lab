@@ -26,7 +26,6 @@ export const cacheService = {
         request.onsuccess = () => resolve(request.result || null);
       });
     } catch (e) {
-      console.warn('Cache get failed', e);
       return null;
     }
   },
@@ -42,7 +41,6 @@ export const cacheService = {
         request.onsuccess = () => resolve();
       });
     } catch (e) {
-      console.warn('Cache set failed', e);
     }
   },
 

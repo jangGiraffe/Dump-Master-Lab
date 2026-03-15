@@ -4,7 +4,7 @@ import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Question } from '@/shared/model/types';
 import { historyService } from '@/shared/api/historyService';
 import { formatTime, ResultCharacter } from '@/shared/lib/utils';
-import { Share2, RotateCcw, Home, Download, CheckCircle, XCircle, ChevronDown, ChevronUp, Clock, Zap, Target, Swords, Bot, Copy, AlertTriangle } from 'lucide-react';
+import { Share2, RotateCcw, Home, Download, CheckCircle, XCircle, ChevronDown, ChevronUp, Clock, Zap, Target, Swords, Bot, Copy, AlertTriangle, Languages } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { RandomQuote } from '@/shared/ui/RandomQuote';
 
@@ -47,6 +47,7 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const resultCardRef = React.useRef<HTMLDivElement>(null);
 
@@ -96,7 +97,6 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      console.error('Failed to download image', err);
       showToast('이미지 생성에 실패했습니다.');
     }
   };
@@ -291,7 +291,20 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
 
                 {isExpanded && (
                   <div className="p-4 border-t dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50">
-                    <p className="whitespace-pre-wrap text-gray-800 dark:text-slate-200 mb-4 font-medium text-sm md:text-base">{q.question}</p>
+                    <div className="flex justify-between items-start mb-4">
+                      <p className="whitespace-pre-wrap text-gray-800 dark:text-slate-200 font-medium text-sm md:text-base flex-grow">
+                        {(showOriginal && q.originalQuestion) ? q.originalQuestion : q.question}
+                      </p>
+                      {q.originalQuestion && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setShowOriginal(!showOriginal); }}
+                          className={`ml-2 p-1.5 rounded-lg border transition-colors ${showOriginal ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200' : 'bg-gray-50 dark:bg-slate-700 text-gray-400 dark:text-slate-400 border-gray-100 hover:text-purple-600'}`}
+                          title={q.sourceVersion?.startsWith('kr-') ? (showOriginal ? "한국어 보기" : "원문 보기") : (showOriginal ? "원문 보기" : "번역 보기")}
+                        >
+                          <Languages className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
 
                     {(!q.options || q.options.length === 0 || !q.answer || q.answer.trim() === '') && (
                       <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-3 rounded-lg mb-4 text-xs md:text-sm text-red-700 dark:text-red-400 flex items-start gap-3">
@@ -319,7 +332,10 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
 
                         return (
                           <div key={i} className={optClass}>
-                            {stripLabel(opt)}
+                            {(showOriginal && q.originalOptions && q.originalOptions[i])
+                              ? stripLabel(q.originalOptions[i])
+                              : stripLabel(opt)
+                            }
                           </div>
                         );
                       })}
@@ -327,7 +343,7 @@ export const Result: React.FC<ResultProps> = ({ questions, userAnswers, timeTake
 
                     <div className="bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded border border-yellow-100 dark:border-yellow-700/30 text-xs md:text-sm mb-4">
                       <p className="font-semibold text-warning/90 mb-1">해설:</p>
-                      <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{q.explanation}</p>
+                      <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{(showOriginal && q.originalExplanation) ? q.originalExplanation : q.explanation}</p>
                     </div>
 
                     <div className="flex justify-start">

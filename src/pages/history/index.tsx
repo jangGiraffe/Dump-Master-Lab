@@ -5,7 +5,7 @@ import { historyService } from '@/shared/api/historyService';
 import { examService } from '@/shared/api/examService';
 import { dataSources } from '@/shared/api/dataService';
 import { formatTime, ResultCharacter, processRawQuestions } from '@/shared/lib/utils';
-import { ChevronLeft, ChevronDown, Trash2, Calendar, Award, Clock, BarChart2, BarChart3, BookOpen, Target, Cloud, RefreshCw, Eye, X, AlertCircle, Copy, Bot } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Trash2, Calendar, Award, Clock, BarChart2, BarChart3, BookOpen, Target, Cloud, RefreshCw, Eye, X, AlertCircle, Copy, Bot, Languages } from 'lucide-react';
 
 interface HistoryProps {
     onBack: () => void;
@@ -245,6 +245,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [copiedBulk, setCopiedBulk] = useState(false);
     const [toastMsg, setToastMsg] = useState<string | null>(null);
+    const [showOriginal, setShowOriginal] = useState(false);
 
     const showToast = (msg: string) => {
         setToastMsg(msg);
@@ -257,10 +258,20 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
         const map: Record<string, Question> = {};
         datasets.forEach(ds => {
             let originalData: any[] | undefined = undefined;
-            if (ds.url && ds.url.endsWith('_KR.json')) {
-                const originalUrl = ds.url.replace('_KR.json', '.json');
-                const originalDataset = datasets.find(d => d.url === originalUrl);
-                if (originalDataset) originalData = originalDataset.data;
+            if (ds.url) {
+                let counterpartUrl = '';
+                if (ds.url.endsWith('_KR.json')) {
+                    counterpartUrl = ds.url.replace('_KR.json', '.json');
+                } else if (ds.url.endsWith('.json') && !ds.url.includes('_KR')) {
+                    counterpartUrl = ds.url.replace('.json', '_KR.json');
+                }
+                
+                if (counterpartUrl) {
+                    const counterpartDataset = datasets.find(d => d.url === counterpartUrl);
+                    if (counterpartDataset) {
+                        originalData = counterpartDataset.data;
+                    }
+                }
             }
             const processed = processRawQuestions(ds.data, ds.id, originalData);
             processed.forEach(q => {
@@ -453,21 +464,37 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
                 showToast('기록이 삭제되었습니다.');
                 await loadRecords();
             } catch (err) {
-                console.error('Failed to delete record:', err);
                 showToast('기록 삭제에 실패했습니다. 서버 연결을 확인해주세요.');
             }
         }
     };
 
     const handleViewDetails = async (record: HistoryRecord) => {
-        // Before showing modal, ensure the datasets are loaded
-        const missingIds = record.examNames.filter(id => !datasets.find(d => d.id === id));
+        // Before showing modal, ensure the datasets are loaded (including counterparts)
+        const requiredIds = new Set(record.examNames);
+        
+        record.examNames.forEach(id => {
+            const source = dataSources.find(s => s.id === id);
+            if (source && source.url) {
+                if (source.url.endsWith('_KR.json')) {
+                    const enUrl = source.url.replace('_KR.json', '.json');
+                    const enSource = dataSources.find(s => s.url === enUrl);
+                    if (enSource) requiredIds.add(enSource.id);
+                } else if (source.url.endsWith('.json') && !source.url.includes('_KR')) {
+                    const krUrl = source.url.replace('.json', '_KR.json');
+                    const krSource = dataSources.find(s => s.url === krUrl);
+                    if (krSource) requiredIds.add(krSource.id);
+                }
+            }
+        });
+
+        const missingIds = Array.from(requiredIds).filter(id => !datasets.find(d => d.id === id));
+        
         if (missingIds.length > 0) {
             setIsLoading(true);
             try {
                 await onLoadMoreData(missingIds);
             } catch (err) {
-                console.error("Failed to load details", err);
                 showToast("데이터를 불러오지 못했습니다.");
             } finally {
                 setIsLoading(false);
@@ -484,7 +511,6 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
                 showToast(`[${name}]의 모든 기록이 삭제되었습니다.`);
                 await loadRecords();
             } catch (err) {
-                console.error('Failed to delete group:', err);
                 showToast('기록 삭제에 실패했습니다. 서버 연결을 확인해주세요.');
                 setIsLoading(false);
             }
@@ -510,7 +536,6 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
                 showToast(`${count}개의 새로운 기록이 서버로 동기화되었습니다.`);
                 await loadRecords();
             } catch (e) {
-                console.error(e);
                 showToast('동기화 중 오류가 발생했습니다.');
             } finally {
                 setIsLoading(false);
@@ -1016,7 +1041,20 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
                                                     <span className="text-[10px] px-2 py-0.5 bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-md font-bold uppercase">{q.sourceVersion}</span>
                                                 </div>
                                                 <div className="p-5">
-                                                    <p className="text-sm md:text-base font-bold text-gray-800 dark:text-white mb-6 whitespace-pre-wrap leading-relaxed">{q.question}</p>
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <p className="text-sm md:text-base font-bold text-gray-800 dark:text-white mb-2 whitespace-pre-wrap leading-relaxed">
+                                                            {(showOriginal && q.originalQuestion) ? q.originalQuestion : q.question}
+                                                        </p>
+                                                        {q.originalQuestion && (
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); setShowOriginal(!showOriginal); }}
+                                                                className={`ml-2 p-1.5 rounded-lg border transition-colors ${showOriginal ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200' : 'bg-gray-50 dark:bg-slate-700 text-gray-400 dark:text-slate-400 border-gray-100 hover:text-purple-600'}`}
+                                                                title={q.sourceVersion.startsWith('kr-') ? (showOriginal ? "한국어 보기" : "원문 보기") : (showOriginal ? "원문 보기" : "번역 보기")}
+                                                            >
+                                                                <Languages className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
 
                                                     <div className="space-y-2 mb-6">
                                                         {q.options.map((opt, i) => {
@@ -1030,7 +1068,10 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
                                                                         : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 text-gray-600 dark:text-slate-400'
                                                                         }`}
                                                                 >
-                                                                    {opt}
+                                                                    {(showOriginal && q.originalOptions && q.originalOptions[i])
+                                                                        ? q.originalOptions[i]
+                                                                        : opt
+                                                                    }
                                                                 </div>
                                                             );
                                                         })}
@@ -1042,7 +1083,7 @@ export const History: React.FC<HistoryProps> = ({ onBack, userId, datasets, onLo
                                                             <span className="text-xs font-bold uppercase tracking-tight">해설 (Explanation)</span>
                                                         </div>
                                                         <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                                                            {q.explanation}
+                                                            {(showOriginal && q.originalExplanation) ? q.originalExplanation : q.explanation}
                                                         </p>
                                                     </div>
 
