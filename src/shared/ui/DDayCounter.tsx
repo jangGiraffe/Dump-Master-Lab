@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Edit3, X, Clock, Target, Trash2, Loader2 } from 'lucide-react';
+import { Calendar, Edit3, X, Clock, Target, Trash2 } from 'lucide-react';
 import { examService, UserExamConfig } from '@/shared/api/examService';
 import { UserTier } from '@/shared/model/types';
 
@@ -7,40 +7,24 @@ interface DDayCounterProps {
     userId: string;
     userTier: UserTier | null;
     className?: string;
+    examConfig: UserExamConfig | null;
+    onExamConfigChange: (config: UserExamConfig | null) => void;
 }
 
-export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, userTier, className = '' }) => {
-    const [examInfo, setExamInfo] = useState<UserExamConfig | null>(null);
+export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, userTier, className = '', examConfig, onExamConfigChange }) => {
+    const [examInfo, setExamInfo] = useState<UserExamConfig | null>(examConfig);
     const [isEditing, setIsEditing] = useState(false);
     const [tempInfo, setTempInfo] = useState<UserExamConfig>({ date: '', time: '09:00', code: '' });
     const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; mins: number; secs: number } | null>(null);
-    const [loading, setLoading] = useState(true);
     const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-    const showToast = (msg: string) => {
-        setToastMsg(msg);
-        setTimeout(() => setToastMsg(null), 3000);
-    };
-
-    // Load Initial Data
-    useEffect(() => {
-        const loadConfig = async () => {
-            // Guest users should not load/see D-Day info even if it exists locally
-            if (userTier === 'G' || !userId) {
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
-            const config = await examService.getUserExamConfig(userId);
-            if (config) {
-                setExamInfo(config);
-                setTempInfo(config);
-            }
-            setLoading(false);
-        };
-        loadConfig();
-    }, [userId, userTier]);
+    // Sync examInfo when parent prop changes
+    React.useEffect(() => {
+        setExamInfo(examConfig);
+        if (examConfig) {
+            setTempInfo(examConfig);
+        }
+    }, [examConfig]);
 
     const calculateTimeLeft = useCallback(() => {
         if (!examInfo || !examInfo.date) return null;
@@ -74,6 +58,11 @@ export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, userTier, clas
         return () => clearInterval(timer);
     }, [examInfo, calculateTimeLeft]);
 
+    const showToast = (msg: string) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(null), 3000);
+    };
+
     const handleSave = async () => {
         if (userTier === 'G') {
             showToast('체험하기 모드에서는 일정을 등록할 수 없습니다.');
@@ -84,6 +73,7 @@ export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, userTier, clas
         if (tempInfo.date && tempInfo.code) {
             await examService.saveUserExamConfig(userId, tempInfo);
             setExamInfo(tempInfo);
+            onExamConfigChange(tempInfo); // 부모 App 상태 업데이트
             setIsEditing(false);
             showToast('시험 일정이 성공적으로 저장되었습니다!');
         } else {
@@ -95,51 +85,12 @@ export const DDayCounter: React.FC<DDayCounterProps> = ({ userId, userTier, clas
         if (window.confirm('등록된 시험 일정을 삭제할까요?')) {
             await examService.deleteUserExamConfig(userId);
             setExamInfo(null);
+            onExamConfigChange(null); // 부모 App 상태 업데이트
             setTempInfo({ date: '', time: '09:00', code: '' });
             setIsEditing(false);
             showToast('일정이 삭제되었습니다.');
         }
     };
-
-    if (loading) {
-        return (
-            <div className={`relative w-full bg-slate-900/40 py-4 md:py-5 px-6 md:px-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 overflow-hidden ${className}`}>
-                {/* Blurred Content Proxy */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 blur-md opacity-20 pointer-events-none select-none">
-                    <div className="flex items-center gap-4 shrink-0">
-                        <div className="w-10 h-10 bg-white/20 rounded-xl" />
-                        <div className="space-y-1.5">
-                            <div className="h-4 w-32 bg-white/20 rounded" />
-                            <div className="h-2 w-20 bg-white/10 rounded" />
-                        </div>
-                    </div>
-                    <div className="flex-grow max-w-sm w-full">
-                        <div className="grid grid-cols-4 gap-2 md:gap-3">
-                            {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="flex flex-col items-center gap-1.5">
-                                    <div className="w-full aspect-square bg-white/10 rounded-xl" />
-                                    <div className="h-2 w-full bg-white/5 rounded" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Loading Spinner Overaly */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full" />
-                            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin relative z-10" />
-                        </div>
-                        <span className="text-[10px] font-black text-indigo-400/60 uppercase tracking-[0.2em] animate-pulse">
-                            Loading Config
-                        </span>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     if (isEditing) {
         return (

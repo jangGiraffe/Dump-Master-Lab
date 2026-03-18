@@ -10,6 +10,7 @@ import { History } from '@/pages/history';
 import { dataSources } from '@/shared/api/dataService';
 import { historyService } from '@/shared/api/historyService';
 import { shuffleArray, processRawQuestions, authenticateUser } from '@/shared/lib/utils';
+import { examService, UserExamConfig } from '@/shared/api/examService';
 import { APP_CONFIG } from '@/shared/config';
 import { Loader2, AlertCircle, Bot } from 'lucide-react';
 import { cacheService } from '@/shared/api/cacheService';
@@ -33,6 +34,7 @@ const App: React.FC = () => {
   const [userHash, setUserHash] = useState<string>('');
   const [timeTaken, setTimeTaken] = useState<number>(0);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [examConfig, setExamConfig] = useState<UserExamConfig | null>(null);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -213,6 +215,11 @@ const App: React.FC = () => {
 
     loadData(tier);
 
+    // Load exam config once at login (single Firestore read)
+    examService.getUserExamConfig(finalUserId).then(config => {
+      setExamConfig(config);
+    }).catch(() => {});
+
     // Initial sync
     historyService.syncLocalToCloud(finalUserId).catch(err => {
     });
@@ -221,6 +228,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setStage(AppStage.LOGIN);
     setDatasets([]);
+    setExamConfig(null);
     // Clear session from localStorage
     localStorage.removeItem(SESSION_KEY);
   };
@@ -511,7 +519,14 @@ const App: React.FC = () => {
         {stage === AppStage.LOGIN && <Login onLogin={handleLogin} />}
 
         {stage === AppStage.MENU && (
-          <Menu onSelectMode={handleMenuSelect} onLogout={handleLogout} userTier={userTier} userId={userHash} />
+          <Menu
+            onSelectMode={handleMenuSelect}
+            onLogout={handleLogout}
+            userTier={userTier}
+            userId={userHash}
+            examConfig={examConfig}
+            onExamConfigChange={setExamConfig}
+          />
         )}
 
         {stage === AppStage.STUDY && (
@@ -530,6 +545,7 @@ const App: React.FC = () => {
             onLoadMoreData={fetchDatasets}
             onClearCache={handleClearCache}
             userId={userHash}
+            examConfig={examConfig}
           />
         )}
 

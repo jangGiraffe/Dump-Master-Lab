@@ -7,17 +7,20 @@ import { StudyCactus } from '@/shared/ui/StudyCactus';
 
 import { APP_CONFIG } from '@/shared/config';
 import { UserTier } from '@/shared/model/types';
+import { UserExamConfig } from '@/shared/api/examService';
 
 interface MenuProps {
   onSelectMode: (mode: 'quiz' | 'study' | 'history' | 'boss-raid' | 'practice') => void;
   onLogout: () => void;
   userTier: UserTier | null;
   userId: string;
+  examConfig: UserExamConfig | null;
+  onExamConfigChange: (config: UserExamConfig | null) => void;
 }
 
 import { GraduationCap } from 'lucide-react';
 
-export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier, userId }) => {
+export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier, userId, examConfig, onExamConfigChange }) => {
   return (
     <div className="flex-grow bg-gray-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6 transition-colors duration-300">
       <div className="absolute top-4 right-4">
@@ -52,7 +55,12 @@ export const Menu: React.FC<MenuProps> = ({ onSelectMode, onLogout, userTier, us
           <StudyCactus />
 
           <div className="w-full mt-6 mb-4 animate-slideUp">
-            <DDayCounter userId={userId} userTier={userTier} />
+            <DDayCounter
+              userId={userId}
+              userTier={userTier}
+              examConfig={examConfig}
+              onExamConfigChange={onExamConfigChange}
+            />
           </div>
         </div>
 

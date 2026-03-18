@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { Dataset, Question, UserTier, QuizConfig, ExamLevel } from '@/shared/model/types';
 import { Settings, Play, ChevronLeft, ChevronRight, BookOpen, Info, Bot, Loader2, Target } from 'lucide-react';
-import { examService } from '@/shared/api/examService';
+import { examService, UserExamConfig } from '@/shared/api/examService';
 import { dataSources } from '@/shared/api/dataService';
+import { historyService } from '@/shared/api/historyService';
 
 interface SetupProps {
   datasets: Dataset[];
@@ -16,6 +17,7 @@ interface SetupProps {
   onLoadMoreData: (sourceIds: string[]) => Promise<Dataset[]>;
   onClearCache?: () => void;
   userId?: string;
+  examConfig?: UserExamConfig | null;
 }
 
 export const Setup: React.FC<SetupProps> = ({
@@ -28,7 +30,8 @@ export const Setup: React.FC<SetupProps> = ({
   wrongQuestionIds = [],
   onLoadMoreData,
   onClearCache,
-  userId = ''
+  userId = '',
+  examConfig = null
 }) => {
   const getLevelBadge = (level?: ExamLevel) => {
     if (!level) return null;
@@ -57,19 +60,15 @@ export const Setup: React.FC<SetupProps> = ({
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isAwsMode, setIsAwsMode] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [dDayConfig, setDDayConfig] = useState<{ code: string; date: string } | null>(null);
 
-  // Fetch D-Day configured exam
-  useEffect(() => {
-    const fetchDDay = async () => {
-      if (!userId) return;
-      const config = await examService.getUserExamConfig(userId);
-      if (config && config.code && config.date) {
-        setDDayConfig({ code: config.code, date: config.date });
-      }
-    };
-    fetchDDay();
-  }, [userId]);
+
+
+
+
+  // D-Day config: derived from the prop passed by App (no Firestore read needed)
+  const dDayConfig = examConfig && examConfig.code && examConfig.date
+    ? { code: examConfig.code, date: examConfig.date }
+    : null;
 
   const getDDayCount = (targetDate: string) => {
     const today = new Date();
@@ -564,35 +563,37 @@ export const Setup: React.FC<SetupProps> = ({
                       <div
                         key={ds.id}
                         onClick={() => toggleVersion(ds.id)}
-                        className={`cursor-pointer p-3 border rounded-lg flex items-center justify-between transition-all ${selectedVersions.includes(ds.id)
+                        className={`cursor-pointer p-3 border rounded-lg transition-all ${selectedVersions.includes(ds.id)
                           ? 'border-primary bg-primary/5 dark:bg-primary/20 shadow-sm'
                           : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 bg-white dark:bg-slate-800'
                           }`}
                       >
-                        <div className="flex items-center text-sm">
-                          {lang === 'KR' && (
-                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1.5">
-                              <img src="https://flagcdn.com/w20/kr.png" width="14" alt="KR" className="rounded-sm" /> KR
-                            </span>
-                          )}
-                          {lang === 'EN' && (
-                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 border border-gray-200 dark:border-slate-600 flex items-center gap-1.5">
-                              <img src="https://flagcdn.com/w20/us.png" width="14" alt="EN" className="rounded-sm" /> EN
-                            </span>
-                          )}
-                          {lang === 'JP' && (
-                            <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/20 flex items-center gap-1.5">
-                              <img src="https://flagcdn.com/w20/jp.png" width="14" alt="JP" className="rounded-sm" /> JP
-                            </span>
-                          )}
-                          <span className="font-medium text-gray-700 dark:text-slate-300 mr-2">{displayName}</span>
-                          {getLevelBadge(ds.examLevel)}
-                        </div>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedVersions.includes(ds.id) ? 'border-primary bg-primary' : 'border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700'
-                          }`}>
-                          {selectedVersions.includes(ds.id) && (
-                            <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                          )}
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center text-sm">
+                            {lang === 'KR' && (
+                              <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1.5">
+                                <img src="https://flagcdn.com/w20/kr.png" width="14" alt="KR" className="rounded-sm" /> KR
+                              </span>
+                            )}
+                            {lang === 'EN' && (
+                              <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 border border-gray-200 dark:border-slate-600 flex items-center gap-1.5">
+                                <img src="https://flagcdn.com/w20/us.png" width="14" alt="EN" className="rounded-sm" /> EN
+                              </span>
+                            )}
+                            {lang === 'JP' && (
+                              <span className="mr-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/20 flex items-center gap-1.5">
+                                <img src="https://flagcdn.com/w20/jp.png" width="14" alt="JP" className="rounded-sm" /> JP
+                              </span>
+                            )}
+                            <span className="font-medium text-gray-700 dark:text-slate-300 mr-2">{displayName}</span>
+                            {getLevelBadge(ds.examLevel)}
+                          </div>
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${selectedVersions.includes(ds.id) ? 'border-primary bg-primary' : 'border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700'
+                            }`}>
+                            {selectedVersions.includes(ds.id) && (
+                              <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -718,8 +719,8 @@ export const Setup: React.FC<SetupProps> = ({
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3">
                 <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div className="text-sm text-amber-800 dark:text-amber-300">
-                  <p className="font-bold mb-1">무한 공부 모드 안내</p>
-                  <p className="leading-relaxed opacity-90">선택한 문제 은행의 모든 문제를 시간 제한 없이 학습합니다. 마지막 문제 이후에는 자동으로 처음부터 다시 시작되어 무제한으로 학습하실 수 있습니다.</p>
+                  <p className="font-bold mb-1">공부 모드 안내</p>
+                  <p className="leading-relaxed opacity-90">선택한 문제 은행의 모든 문제를 시간 제한 없이 학습합니다. 한 문제씩 풀고 바로 정답을 확인하며, 마지막 문제까지 완료하면 학습이 종료됩니다.</p>
                 </div>
               </div>
             )}

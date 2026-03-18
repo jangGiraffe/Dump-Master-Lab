@@ -106,7 +106,7 @@ export const examsInfo: Record<string, ExamInfo> = {
 const STORAGE_MODE = import.meta.env.VITE_STORAGE_MODE || 'LOCAL';
 const LOCAL_EXAM_CONFIG_KEY = 'dump_master_exam_info';
 const LOCAL_EXAM_CACHE_TS_KEY = 'dump_master_exam_cache_ts';
-const CACHE_TTL = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 class ExamService {
     getAllExams(): ExamInfo[] {

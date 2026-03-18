@@ -262,20 +262,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, timeLimitMinutes, onCompl
       // Reset scroll position
       if (mainRef.current) mainRef.current.scrollTop = 0;
     } else {
-      if (isPractice) {
-        // Infinite Loop back to start
-        setCurrentIdx(0);
-        setShowExplanation(false);
-        setShowOriginal(false);
-        setIsAnswerChecked(false);
-        setAnimationKey(prev => prev + 1);
-        if (mainRef.current) mainRef.current.scrollTop = 0;
-        setToastMsg("첫 번째 문제로 돌아왔습니다. 무한 공부 모드!");
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 2000);
-      } else {
-        handleFinish();
-      }
+      handleFinish();
     }
   }, [currentIdx, questions, answers, handleFinish, isPractice, isAnswerChecked]);
 
