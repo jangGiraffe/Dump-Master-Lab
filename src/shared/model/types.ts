@@ -38,7 +38,8 @@ export enum AppStage {
   QUIZ = 'QUIZ',
   RESULT = 'RESULT',
   HISTORY = 'HISTORY',
-  BOSS_RAID = 'BOSS_RAID'
+  BOSS_RAID = 'BOSS_RAID',
+  ADMIN = 'ADMIN'
 }
 
 export interface HistoryRecord {
@@ -57,7 +58,7 @@ export interface HistoryRecord {
 }
 
 
-export type UserTier = 'N' | 'V' | 'G'; // N: Normal, V: VIP, G: Guest
+export type UserTier = 'N' | 'V' | 'G' | 'A'; // N: Normal, V: VIP, G: Guest, A: Admin
 export type ExamLevel = 'FOUNDATIONAL' | 'ASSOCIATE' | 'PROFESSIONAL' | 'SPECIALTY';
 
 export interface DataSource {

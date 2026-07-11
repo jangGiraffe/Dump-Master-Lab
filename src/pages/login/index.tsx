@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { authenticateUser } from '@/shared/lib/utils';
 import { UserTier } from '@/shared/model/types';
-import { Lock } from 'lucide-react';
+import { Lock, MessageCircle } from 'lucide-react';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 
 interface LoginProps {
@@ -118,6 +118,16 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           >
             {isGuestMode ? '비밀번호 로그인으로 변경' : 'Guest 모드로 전환'}
           </button>
+
+          <a
+            href="https://open.kakao.com/o/sAzqmvEc"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 bg-[#FEE500] hover:bg-[#F4DC00] text-[#191919] font-medium py-2 px-4 rounded-md transition-colors text-sm"
+          >
+            <MessageCircle className="w-5 h-5 fill-current" />
+            사용 문의하기
+          </a>
         </form>
       </div>
     </div>

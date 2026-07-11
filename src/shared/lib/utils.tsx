@@ -117,11 +117,12 @@ const sha256 = async (message: string) => {
   return hashHex;
 };
 
-export const authenticateUser = async (input: string): Promise<'N' | 'V' | null> => {
+export const authenticateUser = async (input: string): Promise<'N' | 'V' | 'A' | null> => {
   try {
     const inputHash = await sha256(input);
     if (inputHash === APP_CONFIG.NORMAL_PASSWORD_HASH) return 'N';
     if (inputHash === APP_CONFIG.VIP_PASSWORD_HASH) return 'V';
+    if (inputHash === APP_CONFIG.ADMIN_PASSWORD_HASH) return 'A';
     return null;
   } catch (e) {
     return null;

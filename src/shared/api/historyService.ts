@@ -88,6 +88,24 @@ export const historyService = {
         }
     },
 
+    getAllRecordsForAdmin: async (): Promise<HistoryRecord[]> => {
+        if (STORAGE_MODE === 'LOCAL') {
+            return historyService.getLocalRecords();
+        }
+
+        try {
+            const querySnapshot = await getDocs(collection(db, 'history'));
+            const records: HistoryRecord[] = [];
+            querySnapshot.forEach((doc) => {
+                records.push({ id: doc.id, ...doc.data() } as HistoryRecord);
+            });
+            return records;
+        } catch (e: any) {
+            console.error("Failed to fetch admin records", e);
+            throw new Error(`Firebase Error: ${e.message || String(e)}`);
+        }
+    },
+
     getLocalRecords: (userId?: string): HistoryRecord[] => {
         const data = localStorage.getItem(STORAGE_KEY);
         if (!data) return [];

@@ -7,6 +7,7 @@ import { Study } from '@/pages/study';
 import { Quiz } from '@/pages/quiz';
 import { Result } from '@/pages/result';
 import { History } from '@/pages/history';
+import { AdminDashboard } from '@/pages/admin';
 import { dataSources } from '@/shared/api/dataService';
 import { historyService } from '@/shared/api/historyService';
 import { shuffleArray, processRawQuestions, authenticateUser } from '@/shared/lib/utils';
@@ -195,6 +196,10 @@ const App: React.FC = () => {
   };
 
   const loadData = async (tier: UserTier) => {
+    if (tier === 'A') {
+      setStage(AppStage.ADMIN);
+      return;
+    }
     // In lazy loading mode, we just transition to MENU.
     // We can pre-load metadata if needed, but for now we trust dataSources.
     setStage(AppStage.MENU);
@@ -558,6 +563,10 @@ const App: React.FC = () => {
           />
         )}
 
+        {stage === AppStage.ADMIN && (
+          <AdminDashboard onLogout={handleLogout} />
+        )}
+
         {stage === AppStage.QUIZ && config && (
           <Quiz
             questions={quizQuestions}
@@ -603,7 +612,7 @@ const App: React.FC = () => {
 
       {/* Global Footer - Only shown for non-immersive stages to prevent layout/scroll issues */}
       {
-        stage !== AppStage.QUIZ && stage !== AppStage.STUDY && stage !== AppStage.HISTORY && (
+        stage !== AppStage.QUIZ && stage !== AppStage.STUDY && stage !== AppStage.HISTORY && stage !== AppStage.ADMIN && (
           <footer className="py-6 text-center text-sm text-gray-500 bg-gray-50 border-t border-gray-200 shrink-0">
             <div className="flex flex-col items-center justify-center space-y-1">
               <div>
