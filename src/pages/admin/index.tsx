@@ -34,17 +34,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     fetchRecords();
   }, []);
 
+  const examRecords = records.filter(r => r.mode !== 'study');
+
   const totalUsers = new Set(records.map(r => r.userId).filter(Boolean)).size;
   const totalTimeSeconds = records.reduce((acc, cur) => acc + (cur.timeTakenSeconds || 0), 0);
-  const totalQuestions = records.reduce((acc, cur) => acc + (cur.totalQuestions || 0), 0);
-  const totalCorrect = records.reduce((acc, cur) => acc + (cur.correctCount || 0), 0);
-  const totalSessions = records.length;
+  const totalQuestions = examRecords.reduce((acc, cur) => acc + (cur.totalQuestions || 0), 0);
+  const totalCorrect = examRecords.reduce((acc, cur) => acc + (cur.correctCount || 0), 0);
+  const totalSessions = examRecords.length;
   
   const averageScore = totalSessions > 0 
-    ? (records.reduce((acc, cur) => acc + (cur.score || 0), 0) / totalSessions).toFixed(1)
+    ? (examRecords.reduce((acc, cur) => acc + (cur.score || 0), 0) / totalSessions).toFixed(1)
     : 0;
     
-  const passCount = records.filter(r => r.isPass).length;
+  const passCount = examRecords.filter(r => r.isPass).length;
   const passRate = totalSessions > 0 ? ((passCount / totalSessions) * 100).toFixed(1) : 0;
 
   // formatTime Helper for long times
@@ -56,7 +58,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   // Detailed Analysis Data
-  const examCounts = records.reduce((acc, cur) => {
+  const examCounts = examRecords.reduce((acc, cur) => {
     (cur.examNames || []).forEach(name => {
       acc[name] = (acc[name] || 0) + 1;
     });
@@ -64,7 +66,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   }, {} as Record<string, number>);
   const topExams = Object.entries(examCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  const userCounts = records.reduce((acc, cur) => {
+  const userCounts = examRecords.reduce((acc, cur) => {
     if (cur.userId) {
       acc[cur.userId] = (acc[cur.userId] || 0) + (cur.totalQuestions || 0);
     }
@@ -72,7 +74,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   }, {} as Record<string, number>);
   const topUsers = Object.entries(userCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  const wrongQuestionCounts = records.reduce((acc, cur) => {
+  const wrongQuestionCounts = examRecords.reduce((acc, cur) => {
     (cur.wrongQuestionIds || []).forEach(id => {
       acc[id] = (acc[id] || 0) + 1;
     });

@@ -535,7 +535,7 @@ const App: React.FC = () => {
         )}
 
         {stage === AppStage.STUDY && (
-          <Study onBack={handleBackToMenu} userTier={userTier} showToast={showToast} />
+          <Study onBack={handleBackToMenu} userTier={userTier} showToast={showToast} userId={userHash} />
         )}
 
         {stage === AppStage.SETUP && (

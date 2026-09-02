@@ -54,7 +54,7 @@ export interface HistoryRecord {
   isRetry?: boolean;
   wrongQuestionIds?: string[]; // IDs of questions answered incorrectly
   userId?: string; // Identification for cross-device sync
-  mode?: 'quiz' | 'practice';
+  mode?: 'quiz' | 'practice' | 'study';
 }
 
 

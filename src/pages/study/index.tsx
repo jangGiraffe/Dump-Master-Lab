@@ -3,20 +3,40 @@ import { UserTier } from '@/shared/model/types';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { pdfDocuments } from '@/shared/api/pdfService';
 import { ChevronLeft, FileText, ExternalLink } from 'lucide-react';
+import { historyService } from '@/shared/api/historyService';
 
 interface StudyProps {
   onBack: () => void;
   userTier: UserTier | null;
   showToast: (msg: string) => void;
+  userId: string;
 }
 
-export const Study: React.FC<StudyProps> = ({ onBack, userTier, showToast }) => {
+export const Study: React.FC<StudyProps> = ({ onBack, userTier, showToast, userId }) => {
   useEffect(() => {
     if (userTier !== 'V') {
       showToast('VIP 회원만 이용 가능한 서비스입니다.');
       onBack();
     }
   }, [userTier, onBack, showToast]);
+
+  useEffect(() => {
+    const startTime = Date.now();
+    return () => {
+      const timeTakenSeconds = Math.round((Date.now() - startTime) / 1000);
+      if (timeTakenSeconds > 10) {
+        historyService.saveRecord({
+          totalQuestions: 0,
+          correctCount: 0,
+          score: 0,
+          timeTakenSeconds,
+          isPass: false,
+          examNames: ['Study Mode'],
+          mode: 'study'
+        }, userId).catch(() => {});
+      }
+    };
+  }, [userId]);
 
   const [selectedPdf, setSelectedPdf] = useState(pdfDocuments[0] || null);
   // Default to showing the list on mobile
